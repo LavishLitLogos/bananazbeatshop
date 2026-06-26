@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "ThisBeatIzBananaz™ Beat Shop",
+  "short_name": "BeatIzBananaz",
+  "description": "Original production, exclusive cookups, premium sound packs, and authentic hip hop crafted by ThisBeatIzBananaz™.",
+  "lang": "en-US",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050505",
+  "theme_color": "#f5c518",
+  "categories": [
+    "music",
+    "business",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "https://pub-e227770267fa4d06ad83201dcfde8d6b.r2.dev/thisbeatizbananazmainlogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://pub-e227770267fa4d06ad83201dcfde8d6b.r2.dev/thisbeatizbananazmainlogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
