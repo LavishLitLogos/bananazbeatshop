@@ -68,13 +68,13 @@ function getCover(beat: Beat) {
   return beat.cover_art_url || MAIN_LOGO;
 }
 
-function getPreviewText(beat: Beat) {
+function getPlayText(beat: Beat) {
   return (
     beat.description ||
     beat.artist_suggestion ||
     beat.mood ||
     beat.vibe ||
-    'Tap in and preview this cookup.'
+    'Tap in and hear this cookup.'
   );
 }
 
@@ -244,7 +244,7 @@ export function BeatLabRoom() {
       return;
     }
 
-    audio.play(beat, true, 45);
+    audio.play(beat, false);
   };
 
   const handleQueueFromBeat = (beat: Beat) => {
@@ -256,7 +256,7 @@ export function BeatLabRoom() {
       return;
     }
 
-    audio.playQueue(playableBeats, index, true, 45);
+    audio.playQueue(playableBeats, index, false);
   };
 
   const handleBuy = (beat: Beat) => {
@@ -734,7 +734,7 @@ function BeatCard({
             onPlay();
           }}
           className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-100 sm:opacity-0 sm:hover:opacity-100 transition-opacity"
-          title={isCurrentlyPlaying ? 'Pause preview' : 'Play preview'}
+          title={isCurrentlyPlaying ? 'Pause' : 'Play'}
         >
           <div className="w-11 h-11 rounded-full bg-[#f5c518] flex items-center justify-center shadow-xl">
             {isCurrentlyPlaying ? (
@@ -796,7 +796,7 @@ function BeatCard({
         </div>
 
         <div className="text-[8px] text-[#777] mt-1 line-clamp-2 min-h-[22px]">
-          {getPreviewText(beat)}
+          {getPlayText(beat)}
         </div>
 
         <div className="flex flex-wrap gap-1 mt-1 min-h-[17px]">

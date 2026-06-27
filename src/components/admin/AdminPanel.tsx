@@ -1118,6 +1118,15 @@ function sanitizeHandle(value: string) {
   return value.trim().replace(/^@+/, '');
 }
 
+type EditableSectionId =
+  | 'adminControls'
+  | 'profile'
+  | 'stats'
+  | 'broadcast'
+  | 'manualSale'
+  | 'licensing'
+  | 'contact';
+
 function SettingsTab({
   editMode,
   reorderMode,
@@ -1135,6 +1144,7 @@ function SettingsTab({
   onRefresh: () => void;
   onLogout: () => void;
 }) {
+  const [editingSection, setEditingSection] = useState<EditableSectionId | null>(null);
   const [profile, setProfile] = useState<ProducerProfileState>(() => appStorage.getProfile());
   const [adminSettings, setAdminSettings] = useState<AdminSettingsState>(() => appStorage.getAdminSettings());
   const [bananazMode, setBananazMode] = useState<BananazModeState>(() => appStorage.getBananazMode());
@@ -1149,6 +1159,7 @@ function SettingsTab({
 
   useEffect(() => {
     const syncLocalState = () => {
+      if (editingSection) return;
       setProfile(appStorage.getProfile());
       setAdminSettings(appStorage.getAdminSettings());
       setBananazMode(appStorage.getBananazMode());
@@ -1159,21 +1170,43 @@ function SettingsTab({
     return () => {
       window.removeEventListener('bananaz-app-storage:update', syncLocalState);
     };
-  }, []);
+  }, [editingSection]);
+
+  const cancelEditing = () => {
+    setProfile(appStorage.getProfile());
+    setAdminSettings(appStorage.getAdminSettings());
+    setBananazMode(appStorage.getBananazMode());
+    setManualSaleForm({
+      beatId: '',
+      beatName: '',
+      price: '',
+      buyerName: '',
+      buyerEmail: '',
+      notes: '',
+    });
+    setEditingSection(null);
+  };
 
   const saveProfile = () => {
     const savedProfile = appStorage.saveProfile(profile);
     setProfile(savedProfile);
+    setEditingSection(null);
   };
 
   const saveAdminSettings = () => {
     const savedSettings = appStorage.saveAdminSettings(adminSettings);
     setAdminSettings(savedSettings);
+    setEditingSection(null);
   };
 
   const saveBananazMode = () => {
-    const savedMode = appStorage.saveBananazMode(bananazMode);
+    const savedMode = appStorage.saveBananazMode({
+      ...bananazMode,
+      enabled: false,
+      animationsEnabled: false,
+    });
     setBananazMode(savedMode);
+    setEditingSection(null);
   };
 
   const updateFamzCount = (field: 'famzCount' | 'bananazAppFamzCount' | 'bananazAppSalesCount', change: number) => {
@@ -1184,13 +1217,10 @@ function SettingsTab({
       return;
     }
 
-    const nextSettings = {
-      ...adminSettings,
+    setAdminSettings((currentSettings) => ({
+      ...currentSettings,
       [field]: nextValue,
-    };
-
-    setAdminSettings(nextSettings);
-    appStorage.saveAdminSettings(nextSettings);
+    }));
   };
 
   const addManualSale = () => {
@@ -1253,41 +1283,43 @@ function SettingsTab({
 
   return (
     <div className="space-y-4">
-      <div className="beat-card p-4 space-y-3">
-        <div className="font-display font-800 uppercase text-white">Admin Controls</div>
-
+      <EditableSettingsSection
+        id="adminControls"
+        title="Admin Controls"
+        subtitle="Locked by default. Unlock this section before changing admin behavior."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveAdminSettings}
+      >
         <ToggleRow label="Edit Mode" active={editMode} onClick={() => onEditMode(!editMode)} />
         <ToggleRow label="Reorder Mode" active={reorderMode} onClick={() => onReorderMode(!reorderMode)} />
         <ToggleRow
           label="Allow Submissions"
           active={adminSettings.allowSubmissions}
-          onClick={() => {
-            const nextSettings = {
-              ...adminSettings,
-              allowSubmissions: !adminSettings.allowSubmissions,
-            };
-            setAdminSettings(nextSettings);
-            appStorage.saveAdminSettings(nextSettings);
-          }}
+          onClick={() => updateAdminSettings('allowSubmissions', !adminSettings.allowSubmissions)}
         />
 
-        <button onClick={onRefresh} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+        <button type="button" onClick={onRefresh} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
           <RefreshCw size={14} />
           Refresh Counts
         </button>
 
-        <button onClick={onLogout} className="bg-red-950/20 border border-red-900/30 text-red-400 w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+        <button type="button" onClick={onLogout} className="bg-red-950/20 border border-red-900/30 text-red-400 w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
           <LogOut size={14} />
           Logout To Buyer Mode
         </button>
-      </div>
+      </EditableSettingsSection>
 
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">Profile Editor</div>
-          <p className="text-xs text-[#666] mt-1">All profile fields are optional. Nothing is hardcoded here.</p>
-        </div>
-
+      <EditableSettingsSection
+        id="profile"
+        title="Profile Editor"
+        subtitle="All profile fields are optional. Nothing is hardcoded here."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveProfile}
+      >
         <AdminTextInput label="Display Name" value={profile.displayName} onChange={(value) => updateProfile('displayName', value)} />
         <AdminTextInput label="Headline / Role Line" value={profile.headline} onChange={(value) => updateProfile('headline', value)} placeholder="Example: Producer · Composer · Sound Architect" />
         <AdminTextInput label="Slogan / Quote" value={profile.sloganQuote} onChange={(value) => updateProfile('sloganQuote', value)} />
@@ -1343,19 +1375,17 @@ function SettingsTab({
 
         <AdminTextArea label="Additional Info" value={profile.additionalInfo} onChange={(value) => updateProfile('additionalInfo', value)} />
         <ToggleRow label="Show “scan the QR 🔥” footer" active={profile.showQrFooter} onClick={() => updateProfile('showQrFooter', !profile.showQrFooter)} />
+      </EditableSettingsSection>
 
-        <button onClick={saveProfile} className="bg-[#f5c518] text-black w-full py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2">
-          <Check size={15} />
-          Save Profile
-        </button>
-      </div>
-
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">FAMZ + App Stats</div>
-          <p className="text-xs text-[#666] mt-1">Manual controls save inside this app build.</p>
-        </div>
-
+      <EditableSettingsSection
+        id="stats"
+        title="FAMZ + App Stats"
+        subtitle="Manual controls save inside this app build. Unlock before changing counts."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveAdminSettings}
+      >
         <CounterControl
           label="Total FAMZ Count"
           value={adminSettings.famzCount}
@@ -1379,27 +1409,30 @@ function SettingsTab({
           onPlus={() => updateFamzCount('bananazAppSalesCount', 1)}
           onChange={(value) => updateAdminSettings('bananazAppSalesCount', value)}
         />
+      </EditableSettingsSection>
 
-        <button onClick={saveAdminSettings} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-          <Check size={14} />
-          Save Counts + Settings
-        </button>
-      </div>
-
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">Bananaz Mode Broadcast</div>
-          <p className="text-xs text-[#666] mt-1">Admin-only visual PSA. Changes the app glow/theme without blocking the UI.</p>
+      <EditableSettingsSection
+        id="broadcast"
+        title="Bananaz Mode Broadcast — Parked"
+        subtitle="Controls are locked and forced OFF so this feature cannot break the app."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveBananazMode}
+      >
+        <div className="rounded-xl border border-red-900/30 bg-red-950/15 p-3 text-xs text-red-300 leading-relaxed">
+          Bananaz Mode is parked for stability. Saving this section forces the mode OFF and disables animations.
         </div>
 
-        <ToggleRow label="Bananaz Mode Active" active={bananazMode.enabled} onClick={() => updateBananazMode('enabled', !bananazMode.enabled)} />
+        <ToggleRow label="Bananaz Mode Active" active={false} disabled onClick={() => undefined} />
         <ToggleRow label="Glow Enabled" active={bananazMode.glowEnabled} onClick={() => updateBananazMode('glowEnabled', !bananazMode.glowEnabled)} />
-        <ToggleRow label="Animations Enabled" active={bananazMode.animationsEnabled} onClick={() => updateBananazMode('animationsEnabled', !bananazMode.animationsEnabled)} />
+        <ToggleRow label="Animations Enabled" active={false} disabled onClick={() => undefined} />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {BANANAZ_THEME_PALETTE.map((theme) => (
             <button
               key={theme.name}
+              type="button"
               onClick={() => updateBananazMode('selectedTheme', theme.name)}
               className={`rounded-xl border p-3 text-left transition-all ${
                 bananazMode.selectedTheme === theme.name ? 'border-[#f5c518] bg-[#f5c518]/10' : 'border-[#222] bg-[#0d0d0d]'
@@ -1418,19 +1451,20 @@ function SettingsTab({
 
         <AdminTextInput label="Broadcast Title" value={bananazMode.broadcastTitle} onChange={(value) => updateBananazMode('broadcastTitle', value)} />
         <AdminTextArea label="Broadcast Message" value={bananazMode.broadcastMessage} onChange={(value) => updateBananazMode('broadcastMessage', value)} />
+      </EditableSettingsSection>
 
-        <button onClick={saveBananazMode} className="bg-[#f5c518] text-black w-full py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2">
-          <Check size={15} />
-          Save Broadcast Mode
-        </button>
-      </div>
-
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">Manual / Private App Sale</div>
-          <p className="text-xs text-[#666] mt-1">Optional fields. This tracks outside/private sales inside app storage.</p>
-        </div>
-
+      <EditableSettingsSection
+        id="manualSale"
+        title="Manual / Private App Sale"
+        subtitle="Optional fields. Unlock to add outside/private sales inside app storage."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={() => {
+          saveAdminSettings();
+          setEditingSection(null);
+        }}
+      >
         <AdminTextInput label="Beat ID" value={manualSaleForm.beatId} onChange={(value) => setManualSaleForm((current) => ({ ...current, beatId: value }))} />
         <AdminTextInput label="Beat Name" value={manualSaleForm.beatName} onChange={(value) => setManualSaleForm((current) => ({ ...current, beatName: value }))} />
         <AdminTextInput label="Price" type="number" value={manualSaleForm.price} onChange={(value) => setManualSaleForm((current) => ({ ...current, price: value }))} />
@@ -1438,7 +1472,7 @@ function SettingsTab({
         <AdminTextInput label="Buyer Email" value={manualSaleForm.buyerEmail} onChange={(value) => setManualSaleForm((current) => ({ ...current, buyerEmail: value }))} />
         <AdminTextArea label="Notes" value={manualSaleForm.notes} onChange={(value) => setManualSaleForm((current) => ({ ...current, notes: value }))} />
 
-        <button onClick={addManualSale} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+        <button type="button" onClick={addManualSale} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
           <Plus size={14} />
           Add Manual Sale
         </button>
@@ -1452,21 +1486,24 @@ function SettingsTab({
                   <div className="text-xs text-[#777] mt-1">{formatMoney(sale.price)} · {sale.buyerName || 'Private buyer'}</div>
                   {sale.notes && <div className="text-[11px] text-[#555] mt-1">{sale.notes}</div>}
                 </div>
-                <button onClick={() => removeManualSale(sale.id)} className="text-red-400 p-2 rounded-lg hover:bg-red-950/20" aria-label="Remove manual sale">
+                <button type="button" onClick={() => removeManualSale(sale.id)} className="text-red-400 p-2 rounded-lg hover:bg-red-950/20" aria-label="Remove manual sale">
                   <Trash2 size={14} />
                 </button>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </EditableSettingsSection>
 
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">Protected Licensing Info</div>
-          <p className="text-xs text-[#666] mt-1">Displayed in the protected licensing tab.</p>
-        </div>
-
+      <EditableSettingsSection
+        id="licensing"
+        title="Protected Licensing Info"
+        subtitle="Displayed in the protected licensing tab. Unlock before editing."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveAdminSettings}
+      >
         <AdminTextArea
           label="Beats"
           value={adminSettings.licensingInfo.beats}
@@ -1499,19 +1536,17 @@ function SettingsTab({
             })
           }
         />
+      </EditableSettingsSection>
 
-        <button onClick={saveAdminSettings} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-          <Check size={14} />
-          Save Licensing
-        </button>
-      </div>
-
-      <div className="beat-card p-4 space-y-4">
-        <div>
-          <div className="font-display font-800 uppercase text-white">Protected Contact Tab</div>
-          <p className="text-xs text-[#666] mt-1">Social handles only. Payment rails are already wired elsewhere.</p>
-        </div>
-
+      <EditableSettingsSection
+        id="contact"
+        title="Protected Contact Tab"
+        subtitle="Social handles only. Payment rails are already wired elsewhere. Unlock before editing."
+        editingSection={editingSection}
+        onEdit={setEditingSection}
+        onCancel={cancelEditing}
+        onSave={saveAdminSettings}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AdminTextInput
             label="Instagram @"
@@ -1577,12 +1612,7 @@ function SettingsTab({
             })
           }
         />
-
-        <button onClick={saveAdminSettings} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-          <Check size={14} />
-          Save Contact Info
-        </button>
-      </div>
+      </EditableSettingsSection>
 
       <div className="beat-card p-4 space-y-3">
         <div className="font-display font-800 uppercase text-white">Recent Admin Actions</div>
@@ -1601,6 +1631,83 @@ function SettingsTab({
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function EditableSettingsSection({
+  id,
+  title,
+  subtitle,
+  editingSection,
+  onEdit,
+  onCancel,
+  onSave,
+  children,
+}: {
+  id: EditableSectionId;
+  title: string;
+  subtitle?: string;
+  editingSection: EditableSectionId | null;
+  onEdit: (id: EditableSectionId) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  children: React.ReactNode;
+}) {
+  const isEditing = editingSection === id;
+  const anotherSectionEditing = Boolean(editingSection && !isEditing);
+
+  return (
+    <div className={`beat-card p-4 space-y-4 ${anotherSectionEditing ? 'opacity-55' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-display font-800 uppercase text-white">{title}</div>
+          {subtitle && <p className="text-xs text-[#666] mt-1 leading-relaxed">{subtitle}</p>}
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-3 py-2 rounded-xl bg-[#111] border border-[#252525] text-xs text-[#aaa] hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSave}
+                className="px-3 py-2 rounded-xl bg-[#f5c518] text-black text-xs font-bold uppercase flex items-center gap-1.5"
+              >
+                <Check size={13} />
+                Save
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEdit(id)}
+              disabled={anotherSectionEditing}
+              className="px-3 py-2 rounded-xl bg-[#111] border border-[#252525] text-xs text-[#f5c518] hover:bg-[#181818] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              <Edit2 size={13} />
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!isEditing && (
+        <div className="rounded-xl border border-[#222] bg-black/35 px-3 py-2 text-[11px] text-[#666] uppercase tracking-[0.16em] flex items-center gap-2">
+          <Lock size={12} />
+          Locked. Tap Edit to unlock this section.
+        </div>
+      )}
+
+      <fieldset disabled={!isEditing} className={`space-y-4 ${isEditing ? '' : 'opacity-75'}`}>
+        {children}
+      </fieldset>
     </div>
   );
 }

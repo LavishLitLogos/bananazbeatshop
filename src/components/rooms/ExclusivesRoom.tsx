@@ -137,7 +137,7 @@ export function ExclusivesRoom() {
       return;
     }
 
-    audio.play(beat, true, 45);
+    audio.play(beat, false);
   };
 
   const handleQueueFromBeat = (beat: Beat) => {
@@ -149,7 +149,7 @@ export function ExclusivesRoom() {
       return;
     }
 
-    audio.playQueue(playableBeats, index, true, 45);
+    audio.playQueue(playableBeats, index, false);
   };
 
   const handleShare = async (beat: Beat) => {
@@ -515,7 +515,7 @@ function ExclusiveCard({
             onPlay();
           }}
           className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-100 sm:opacity-0 sm:hover:opacity-100 transition-opacity"
-          title={isCurrentlyPlaying ? 'Pause preview' : 'Play preview'}
+          title={isCurrentlyPlaying ? 'Pause' : 'Play'}
         >
           <div className="w-11 h-11 rounded-full bg-[#f5c518] flex items-center justify-center shadow-xl">
             {isCurrentlyPlaying ? (
