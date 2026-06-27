@@ -202,9 +202,9 @@ export const defaultProducerProfile: ProducerProfileState = {
 
 export const defaultLicensingInfo: LicensingInfoState = {
   beats:
-    'Beats - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" in any true/legible way with song title/displays. Available for submissions.',
+    'Beats - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Available for submissions.',
   freeDownloads:
-    'Free DL\'s - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" in any true/legible way with song title/displays. Not available for submissions.',
+    'Free DL\'s - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Not available for submissions.',
   producedBy:
     "Produced by - All songs are considered demos, even though they are singles. They showcase song-writing, production, arrangements & concepts of the producer. All rights reserved, Rawheart Waymakerz Music Group© 2025. Owned by ThisBeatIzBananaz™",
 };
