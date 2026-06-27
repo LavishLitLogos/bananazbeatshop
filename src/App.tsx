@@ -18,29 +18,15 @@ import { BeatBoxCart } from './components/modals/BeatBoxCart';
 import { ToastContainer } from './components/ui/Toast';
 
 function App() {
-  const {
-    currentRoom,
-    cartOpen,
-    bananazMode,
-    bananazTheme,
-    isAdmin,
-  } = useApp();
-
-  const bananazClass = bananazMode
-    ? `bananaz-mode bananaz-${bananazTheme}`
-    : '';
+  const { currentRoom, cartOpen, isAdmin } = useApp();
 
   return (
-    <div
-      className={`min-h-screen bg-[#080808] text-white relative overflow-x-hidden ${bananazClass}`}
-    >
-      {/* Ambient Background */}
+    <div className="min-h-screen bg-[#080808] text-white relative overflow-x-hidden">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-[0.03] blur-[80px]"
           style={{
-            background:
-              'radial-gradient(ellipse,#f5c518 0%,transparent 70%)',
+            background: 'radial-gradient(ellipse,#f5c518 0%,transparent 70%)',
           }}
         />
       </div>
@@ -57,9 +43,7 @@ function App() {
         {currentRoom === 'profile' && <ProfileRoom />}
         {currentRoom === 'exclusives' && <ExclusivesRoom />}
 
-        {currentRoom === 'admin' && isAdmin && (
-          <AdminPanel />
-        )}
+        {currentRoom === 'admin' && isAdmin && <AdminPanel />}
       </div>
 
       <GlobalPlayer />
