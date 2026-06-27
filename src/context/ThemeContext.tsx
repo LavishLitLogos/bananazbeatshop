@@ -40,7 +40,8 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 const BANANAZ_MODE_KEY = 'bananaz_mode_public';
 const BANANAZ_THEME_KEY = 'bananaz_theme_public';
-const SPLASH_MS = 900;
+const SPLASH_MS = 1200;
+const BROADCAST_MS = 4500;
 
 const THEME_OPTIONS: ThemeOption[] = [
   {
@@ -94,11 +95,13 @@ const THEME_OPTIONS: ThemeOption[] = [
   },
 ];
 
-function getStoredMode() {
+function clearStoredMode() {
   try {
-    return localStorage.getItem(BANANAZ_MODE_KEY) === 'true';
+    localStorage.removeItem(BANANAZ_MODE_KEY);
+    localStorage.removeItem('bananazMode');
+    localStorage.removeItem('bananazTheme');
   } catch {
-    return false;
+    // Storage can be blocked in private browsers.
   }
 }
 
@@ -197,11 +200,12 @@ function ModeParticles({ effect }: { effect: ThemeOption['effect'] }) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [bananazMode, setBananazModeState] = useState(getStoredMode);
+  const [bananazMode, setBananazModeState] = useState(false);
   const [bananazTheme, setBananazThemeState] =
     useState<BananazTheme>(getStoredTheme);
   const [splashActive, setSplashActive] = useState(false);
   const splashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeTheme = useMemo(
     () => getThemeOption(bananazTheme),
@@ -233,7 +237,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(bananazTheme, bananazMode);
 
     try {
-      localStorage.setItem(BANANAZ_MODE_KEY, String(bananazMode));
+      localStorage.removeItem(BANANAZ_MODE_KEY);
       localStorage.setItem(BANANAZ_THEME_KEY, bananazTheme);
     } catch {
       // Storage can be blocked in private browsers.
@@ -241,9 +245,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [applyTheme, bananazMode, bananazTheme]);
 
   useEffect(() => {
+    clearStoredMode();
+
     return () => {
       if (splashTimerRef.current) {
         clearTimeout(splashTimerRef.current);
+      }
+
+      if (modeTimerRef.current) {
+        clearTimeout(modeTimerRef.current);
       }
     };
   }, []);
@@ -261,38 +271,63 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, SPLASH_MS);
   }, []);
 
+  const stopBananazMode = useCallback(() => {
+    if (modeTimerRef.current) {
+      clearTimeout(modeTimerRef.current);
+      modeTimerRef.current = null;
+    }
+
+    setBananazModeState(false);
+    clearStoredMode();
+  }, []);
+
+  const startBananazMode = useCallback(() => {
+    if (modeTimerRef.current) {
+      clearTimeout(modeTimerRef.current);
+    }
+
+    setBananazModeState(true);
+    triggerBananazSplash();
+
+    modeTimerRef.current = setTimeout(() => {
+      setBananazModeState(false);
+      modeTimerRef.current = null;
+      clearStoredMode();
+    }, BROADCAST_MS);
+  }, [triggerBananazSplash]);
+
   const setBananazMode = useCallback(
     (value: boolean) => {
-      setBananazModeState(value);
-
       if (value) {
-        triggerBananazSplash();
+        startBananazMode();
+        return;
       }
+
+      stopBananazMode();
     },
-    [triggerBananazSplash]
+    [startBananazMode, stopBananazMode]
   );
 
   const toggleBananazMode = useCallback(() => {
-    setBananazModeState((current) => {
-      const next = !current;
+    if (bananazMode) {
+      stopBananazMode();
+      return;
+    }
 
-      if (next) {
-        triggerBananazSplash();
-      }
-
-      return next;
-    });
-  }, [triggerBananazSplash]);
+    startBananazMode();
+  }, [bananazMode, startBananazMode, stopBananazMode]);
 
   const setBananazTheme = useCallback(
     (theme: BananazTheme) => {
       setBananazThemeState(theme);
 
-      if (bananazMode) {
-        triggerBananazSplash();
+      try {
+        localStorage.setItem(BANANAZ_THEME_KEY, theme);
+      } catch {
+        // Storage can be blocked in private browsers.
       }
     },
-    [bananazMode, triggerBananazSplash]
+    []
   );
 
   const value = useMemo<ThemeContextType>(
@@ -329,7 +364,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {splashActive && (
-        <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center overflow-hidden bg-black/72">
+        <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(var(--bananaz-accent-rgb),0.42)_0%,rgba(0,0,0,0)_62%)] animate-ping" />
 
           <div className="absolute w-[28rem] h-[28rem] rounded-full border-4 border-[var(--bananaz-accent)] opacity-60 animate-ping" />
