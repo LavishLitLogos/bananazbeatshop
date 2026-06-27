@@ -238,10 +238,11 @@ body {
   to { transform: rotate(360deg); }
 }
 @keyframes logo-burst {
-  0% { transform: scale(1); filter: brightness(1); }
-  30% { transform: scale(1.08); filter: brightness(1.5) drop-shadow(0 0 20px #f5c518); }
-  60% { transform: scale(0.97); filter: brightness(1.2) drop-shadow(0 0 10px #f5c518); }
-  100% { transform: scale(1); filter: brightness(1); }
+  0% { transform: scale(0.18) rotate(-1080deg); opacity:0; filter: blur(10px) brightness(.4);}
+  15% { opacity:1; }
+  55% { transform: scale(1.12) rotate(-120deg); filter: blur(0) brightness(1.4) drop-shadow(0 0 28px rgba(245,197,24,.65));}
+  75% { transform: scale(.98) rotate(10deg);}
+  100% { transform: scale(1) rotate(0deg); opacity:1; filter: drop-shadow(0 0 14px rgba(245,197,24,.35));}
 }
 @keyframes glitchSlide {
   0% { transform: translateX(-5px) scaleX(0.8); opacity: 0.6; }
@@ -266,7 +267,7 @@ body {
   50% { transform: translateY(-6px); }
 }
 
-.animate-logo-burst { animation: logo-burst 0.6s ease forwards; }
+.animate-logo-burst { animation: logo-burst 3s cubic-bezier(.18,.9,.25,1) forwards; }
 .animate-bounce-in { animation: bounceIn 0.4s ease forwards; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-gold { animation: pulse-gold 2s ease-in-out infinite; }
