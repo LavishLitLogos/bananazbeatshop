@@ -5,8 +5,10 @@ import { BeatLabRoom } from './components/rooms/BeatLabRoom';
 import { FreeDLsRoom } from './components/rooms/FreeDLsRoom';
 import { BeatTapesRoom } from './components/rooms/BeatTapesRoom';
 import { ProdByRoom } from './components/rooms/ProdByRoom';
+import { CreditsRoom } from './components/rooms/CreditsRoom';
 import { TheLabRoom } from './components/rooms/TheLabRoom';
 import { BeatBaynGrRoom } from './components/rooms/BeatBaynGrRoom';
+import { SupaMasterRoom } from './components/rooms/SupaMasterRoom';
 import { SubmissionRoom } from './components/rooms/SubmissionRoom';
 import { ProfileRoom } from './components/rooms/ProfileRoom';
 import { ExclusivesRoom } from './components/rooms/ExclusivesRoom';
@@ -20,6 +22,24 @@ import { ToastContainer } from './components/ui/Toast';
 function App() {
   const { currentRoom, cartOpen, isAdmin } = useApp();
 
+  const renderRoom = () => {
+    if (currentRoom === 'home') return <HomeRoom />;
+    if (currentRoom === 'beatlab') return <BeatLabRoom />;
+    if (currentRoom === 'freedls') return <FreeDLsRoom />;
+    if (currentRoom === 'beattapes') return <BeatTapesRoom />;
+    if (currentRoom === 'prodby') return <ProdByRoom />;
+    if (currentRoom === 'credits') return <CreditsRoom />;
+    if (currentRoom === 'thelab') return <TheLabRoom />;
+    if (currentRoom === 'beatbayngr') return <BeatBaynGrRoom />;
+    if (currentRoom === 'supamaster') return <SupaMasterRoom />;
+    if (currentRoom === 'submission') return <SubmissionRoom />;
+    if (currentRoom === 'profile') return <ProfileRoom />;
+    if (currentRoom === 'exclusives') return <ExclusivesRoom />;
+    if (currentRoom === 'admin' && isAdmin) return <AdminPanel />;
+
+    return <HomeRoom />;
+  };
+
   return (
     <div className="min-h-screen bg-[#080808] text-white relative overflow-x-hidden">
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -31,20 +51,7 @@ function App() {
         />
       </div>
 
-      <div className="relative z-10">
-        {currentRoom === 'home' && <HomeRoom />}
-        {currentRoom === 'beatlab' && <BeatLabRoom />}
-        {currentRoom === 'freedls' && <FreeDLsRoom />}
-        {currentRoom === 'beattapes' && <BeatTapesRoom />}
-        {currentRoom === 'prodby' && <ProdByRoom />}
-        {currentRoom === 'thelab' && <TheLabRoom />}
-        {currentRoom === 'beatbayngr' && <BeatBaynGrRoom />}
-        {currentRoom === 'submission' && <SubmissionRoom />}
-        {currentRoom === 'profile' && <ProfileRoom />}
-        {currentRoom === 'exclusives' && <ExclusivesRoom />}
-
-        {currentRoom === 'admin' && isAdmin && <AdminPanel />}
-      </div>
+      <div className="relative z-10">{renderRoom()}</div>
 
       <GlobalPlayer />
 

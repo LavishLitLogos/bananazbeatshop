@@ -35,10 +35,12 @@ interface RoomCountMap {
   beattapes: number;
   prodby: number;
   exclusives: number;
+  credits: number;
   thelab: number;
   submission: number;
   profile: number;
   beatbayngr: number;
+  supamaster: number;
 }
 
 interface AppContextType {
@@ -106,10 +108,12 @@ const DEFAULT_ROOM_COUNTS: RoomCountMap = {
   beattapes: 0,
   prodby: 0,
   exclusives: 0,
+  credits: 0,
   thelab: 0,
   submission: 0,
   profile: 0,
   beatbayngr: 0,
+  supamaster: 0,
 };
 
 const ALLOWED_NOTIFICATION_TYPES = new Set([

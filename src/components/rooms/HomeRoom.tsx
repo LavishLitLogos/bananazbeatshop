@@ -14,8 +14,15 @@ const NOTI_ICON = '/assets/images/notis.png';
 
 const ROOMS: { id: Room; label: string; icon: string }[] = [
   { id: 'beatlab', label: 'Beats Lab', icon: '/assets/icons/play-icon.png' },
+  { id: 'freedls', label: 'Free DLs', icon: '/assets/icons/grab-icon.png' },
   { id: 'beattapes', label: 'Beat Tapes', icon: '/assets/icons/beattapes.png' },
-  { id: 'prodby', label: 'Produced By...', icon: '/assets/icons/skip-icon.png' },
+  { id: 'prodby', label: 'Produced By', icon: '/assets/icons/skip-icon.png' },
+
+  { id: 'credits', label: 'Credits', icon: '/assets/icons/play-icon.png' },
+  { id: 'submission', label: 'Submission', icon: '/assets/images/notis.png' },
+  { id: 'beatbayngr', label: 'BeatBaynGr', icon: '/assets/images/glofirereact.png' },
+  { id: 'supamaster', label: 'SupaMaster', icon: '/assets/images/glofirereact.png' },
+
   { id: 'thelab', label: 'The Lab', icon: '/assets/images/glofirereact.png' },
   { id: 'exclusives', label: 'Exclusives', icon: '/assets/icons/play-icon.png' },
   { id: 'profile', label: 'Profile', icon: MAIN_LOGO },
