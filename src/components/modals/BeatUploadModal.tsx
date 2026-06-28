@@ -184,27 +184,28 @@ function UploadField({
   };
 
   return (
-    <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-xs uppercase tracking-[0.22em] text-[#777]">{label}</label>
+    <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3 w-full max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between gap-3 min-w-0">
+        <label className="text-xs uppercase tracking-[0.22em] text-[#777] truncate">{label}</label>
+
         {currentUrl && (
           <button
             type="button"
             onClick={onClear}
             disabled={disabled}
-            className="text-[11px] uppercase tracking-wider text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-[11px] uppercase tracking-wider text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
           >
             Clear
           </button>
         )}
       </div>
 
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={disabled || isUploading}
-          className="inline-flex items-center gap-2 rounded-xl border border-[#333] bg-black px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#f5c518] transition hover:border-[#f5c518]/60 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#333] bg-black px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#f5c518] transition hover:border-[#f5c518]/60 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isUploading ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />}
           {isUploading ? 'Uploading' : 'Upload'}
@@ -217,7 +218,7 @@ function UploadField({
           onChange={(event) => onUrlChange(event.target.value)}
           disabled={disabled || isUploading}
           placeholder="Paste URL or upload file"
-          className="input-dark min-w-0 flex-1 px-3 py-2 text-xs"
+          className="input-dark min-w-0 w-full px-3 py-2 text-xs"
         />
       </div>
 
@@ -232,7 +233,7 @@ function UploadField({
       )}
 
       {currentUrl && kind === 'audio' && (
-        <audio src={currentUrl} controls className="mt-3 w-full" preload="metadata" />
+        <audio src={currentUrl} controls className="mt-3 w-full max-w-full" preload="metadata" />
       )}
     </div>
   );
@@ -254,11 +255,12 @@ function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRo
       disabled={disabled}
       className="flex w-full items-center justify-between gap-4 border-b border-[#1f1f1f] py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <span>
+      <span className="min-w-0">
         <span className="block text-sm font-bold text-white">{label}</span>
-        <span className="block text-xs text-[#777]">{description}</span>
+        <span className="block text-xs text-[#777] leading-relaxed">{description}</span>
       </span>
-      <span className={`relative h-6 w-11 rounded-full transition ${checked ? 'bg-[#f5c518]' : 'bg-[#2b2b2b]'}`}>
+
+      <span className={`relative h-6 w-11 rounded-full transition flex-shrink-0 ${checked ? 'bg-[#f5c518]' : 'bg-[#2b2b2b]'}`}>
         <span
           className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${checked ? 'left-6' : 'left-1'}`}
         />
@@ -399,8 +401,16 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
 
   if (!isAdmin) {
     return (
-      <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal-box max-w-md p-6 text-center" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="modal-backdrop overflow-hidden"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
+      >
+        <div
+          className="modal-box w-[calc(100vw-24px)] max-w-md max-h-[88vh] overflow-y-auto overflow-x-hidden p-6 text-center"
+          onClick={(event) => event.stopPropagation()}
+        >
           <X className="mx-auto mb-3 text-red-300" size={28} />
           <h2 className="font-display text-xl font-black uppercase text-white">Admin Only</h2>
           <p className="mt-2 text-sm text-[#999]">Beat uploads and edits are locked to the owner panel.</p>
@@ -414,31 +424,35 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
 
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop overflow-hidden"
+      onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        if (event.target === event.currentTarget && !locked) onClose();
-      }}
+      onTouchMove={(event) => event.stopPropagation()}
     >
-      <div className="modal-box max-w-3xl w-full" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-[#222] px-5 py-4">
-          <div>
+      <div
+        className="modal-box w-[calc(100vw-24px)] max-w-3xl max-h-[88vh] overflow-y-auto overflow-x-hidden"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#222] bg-[#0d0d0d]/95 backdrop-blur-xl px-4 sm:px-5 py-4">
+          <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.25em] text-[#f5c518]">Admin Beat Lab</p>
             <h2 className="font-display text-xl font-black uppercase tracking-wider text-white">{modalTitle}</h2>
           </div>
+
           <button
             type="button"
             onClick={onClose}
             disabled={locked}
-            className="rounded-xl p-2 text-[#777] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl p-2 text-[#777] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="max-h-[76vh] overflow-y-auto p-5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-            <div className="space-y-4">
+        <div className="p-4 sm:p-5 w-full max-w-full overflow-x-hidden">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="space-y-4 min-w-0">
               <div>
                 <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Beat Title *</label>
                 <input
@@ -450,15 +464,17 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
                 />
               </div>
 
-              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3">
+              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3 w-full max-w-full overflow-x-hidden">
                 <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white">
-                  <Music size={16} className="text-[#f5c518]" />
+                  <Music size={16} className="text-[#f5c518] flex-shrink-0" />
                   Room Logic
                 </div>
+
                 <p className="mt-1 text-xs leading-relaxed text-[#777]">
                   New uploads default to Beat Lab. Free Download moves it to Free DLs. Exclusive only appears in the exclusive room when the exclusive toggle is enabled.
                 </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <span className={`rounded-xl border px-3 py-2 text-center text-xs font-bold uppercase ${!form.is_free && !form.exclusive ? 'border-[#f5c518] text-[#f5c518]' : 'border-[#2b2b2b] text-[#777]'}`}>
                     Beat Lab
                   </span>
@@ -495,7 +511,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
                 onClear={() => updateField('cover_art_url', '')}
               />
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Price</label>
                   <input
@@ -508,6 +524,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
                     className="input-dark mt-1 w-full px-3 py-3 text-sm"
                   />
                 </div>
+
                 <div>
                   <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Artist Suggestion</label>
                   <input
@@ -520,7 +537,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {(
                   [
                     ['genre', 'Genre', 'Hip Hop, R&B'],
@@ -567,9 +584,10 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
               </div>
             </div>
 
-            <aside className="space-y-4">
-              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4">
+            <aside className="space-y-4 min-w-0">
+              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4 w-full max-w-full overflow-hidden">
                 <h3 className="mb-1 text-sm font-black uppercase tracking-wider text-white">Artwork Preview</h3>
+
                 <div className="mt-3 aspect-square overflow-hidden rounded-2xl border border-[#2c2c2c] bg-black">
                   {form.cover_art_url ? (
                     <img src={form.cover_art_url} alt="Beat artwork preview" className="h-full w-full object-cover" />
@@ -581,59 +599,23 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4">
+              <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4 w-full max-w-full overflow-x-hidden">
                 <div className="mb-1 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-                  <CheckCircle2 size={16} className="text-[#f5c518]" />
+                  <CheckCircle2 size={16} className="text-[#f5c518] flex-shrink-0" />
                   Status Toggles
                 </div>
 
-                <ToggleRow
-                  label="Approved"
-                  description="Visible as approved content."
-                  checked={form.admin_approved}
-                  disabled={locked}
-                  onChange={() => toggleField('admin_approved')}
-                />
-                <ToggleRow
-                  label="Hidden"
-                  description="Hide from buyer-facing rooms."
-                  checked={form.hidden}
-                  disabled={locked}
-                  onChange={() => toggleField('hidden')}
-                />
-                <ToggleRow
-                  label="Sold"
-                  description="Mark as no longer available."
-                  checked={form.sold}
-                  disabled={locked}
-                  onChange={() => toggleField('sold')}
-                />
-                <ToggleRow
-                  label="Free"
-                  description="Move to Free DLs and force price to $0."
-                  checked={form.is_free}
-                  disabled={locked}
-                  onChange={() => toggleField('is_free')}
-                />
-                <ToggleRow
-                  label="Release Download"
-                  description="Admin unlock flag for download access."
-                  checked={form.release_download}
-                  disabled={locked}
-                  onChange={() => toggleField('release_download')}
-                />
-                <ToggleRow
-                  label="Exclusive"
-                  description="Only then appears in Exclusives."
-                  checked={form.exclusive}
-                  disabled={locked}
-                  onChange={() => toggleField('exclusive')}
-                />
+                <ToggleRow label="Approved" description="Visible as approved content." checked={form.admin_approved} disabled={locked} onChange={() => toggleField('admin_approved')} />
+                <ToggleRow label="Hidden" description="Hide from buyer-facing rooms." checked={form.hidden} disabled={locked} onChange={() => toggleField('hidden')} />
+                <ToggleRow label="Sold" description="Mark as no longer available." checked={form.sold} disabled={locked} onChange={() => toggleField('sold')} />
+                <ToggleRow label="Free" description="Move to Free DLs and force price to $0." checked={form.is_free} disabled={locked} onChange={() => toggleField('is_free')} />
+                <ToggleRow label="Release Download" description="Admin unlock flag for download access." checked={form.release_download} disabled={locked} onChange={() => toggleField('release_download')} />
+                <ToggleRow label="Exclusive" description="Only then appears in Exclusives." checked={form.exclusive} disabled={locked} onChange={() => toggleField('exclusive')} />
               </div>
             </aside>
           </div>
 
-          <div className="sticky bottom-0 mt-5 flex flex-col gap-3 border-t border-[#222] bg-[#0b0b0b] pt-4 sm:flex-row">
+          <div className="sticky bottom-0 z-20 mt-5 flex flex-col gap-3 border-t border-[#222] bg-[#0b0b0b]/95 backdrop-blur-xl pt-4 sm:flex-row">
             <button
               type="button"
               onClick={handleSave}
@@ -642,6 +624,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
             >
               {saving ? 'Saving...' : isEdit ? 'Save Beat Changes' : 'Upload Beat'}
             </button>
+
             {isEdit && (
               <button
                 type="button"

@@ -96,6 +96,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
   const isCurrentPlaying = isCurrentBeat && audio.isPlaying;
   const downloadUnlocked = canDownloadBeat(beat, isAdmin);
   const showAdminControls = isAdmin && adminEditMode;
+
   const tagGroups = [
     ...splitTags(beat.genre),
     ...splitTags(beat.style),
@@ -118,12 +119,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     }
 
     if (isCurrentBeat) {
-      if (audio.isPlaying) {
-        audio.pause();
-      } else {
-        audio.resume();
-      }
-
+      audio.isPlaying ? audio.pause() : audio.resume();
       return;
     }
 
@@ -176,7 +172,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
     const link = document.createElement('a');
     link.href = beat.audio_file_url;
-    link.download = `${beat.title || 'thisbeatizbananaz-beat'}.mp3`;
+    link.download = `${beat.title || 'thisbeatizbanaz-beat'}.mp3`;
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
@@ -281,15 +277,18 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
   return (
     <div
-      className="modal-backdrop"
-      onClick={(event) => {
-        event.stopPropagation();
-        if (event.target === event.currentTarget) onClose();
-      }}
+      className="modal-backdrop overflow-hidden"
+      onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
+      onTouchMove={(event) => event.stopPropagation()}
     >
-      <div className="modal-box max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
-        <div className="relative">
+      <div
+        className="modal-box w-[calc(100vw-24px)] max-w-md max-h-[88vh] overflow-y-auto overflow-x-hidden"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
+      >
+        <div className="relative w-full overflow-hidden">
           <button
             onClick={onClose}
             className="absolute top-3 right-3 z-20 p-1.5 rounded-lg hover:bg-white/10 bg-black/40 text-[#aaa] hover:text-white transition-colors"
@@ -331,10 +330,10 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
           )}
         </div>
 
-        <div className="p-5 space-y-4">
-          <div className="flex justify-between items-start gap-3">
+        <div className="p-5 space-y-4 w-full max-w-full overflow-x-hidden">
+          <div className="flex justify-between items-start gap-3 min-w-0">
             <div className="flex-1 min-w-0">
-              <h2 className="font-display font-900 text-xl uppercase tracking-wider text-white leading-tight">
+              <h2 className="font-display font-900 text-xl uppercase tracking-wider text-white leading-tight break-words">
                 {beat.title}
               </h2>
 
@@ -358,7 +357,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               </div>
             </div>
 
-            <div className="text-right">
+            <div className="text-right flex-shrink-0">
               <div className="font-display text-2xl font-900 text-[#f5c518]">
                 {beat.is_free ? 'FREE' : `$${formatPrice(beat.price)}`}
               </div>
@@ -368,17 +367,17 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
           {tagGroups.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {tagGroups.map((tag) => (
-                <span key={tag} className="px-2 py-1 rounded-lg bg-[#1a1a1a] text-[#888] text-xs">
+                <span key={tag} className="px-2 py-1 rounded-lg bg-[#1a1a1a] text-[#888] text-xs break-words">
                   {tag}
                 </span>
               ))}
             </div>
           )}
 
-          {beat.description && <p className="text-sm text-[#888] leading-relaxed">{beat.description}</p>}
+          {beat.description && <p className="text-sm text-[#888] leading-relaxed break-words">{beat.description}</p>}
 
           {beat.terms && (
-            <div className="text-xs text-[#666] border-t border-[#1a1a1a] pt-3 leading-relaxed">
+            <div className="text-xs text-[#666] border-t border-[#1a1a1a] pt-3 leading-relaxed break-words">
               <span className="text-[#888] uppercase tracking-wider">Terms:</span> {beat.terms}
             </div>
           )}
@@ -411,9 +410,9 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             </button>
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 flex-wrap">
             {!beat.is_free && !beat.sold && (
-              <button onClick={onBuy} className="btn-gold flex-1 py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+              <button onClick={onBuy} className="btn-gold flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2">
                 <ShoppingBag size={16} />
                 Buy / Request
               </button>
@@ -422,7 +421,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             {(beat.is_free || beat.release_download || isAdmin) && (
               <button
                 onClick={handleDownload}
-                className="btn-gold flex-1 py-3 rounded-xl text-sm flex items-center justify-center gap-2"
+                className="btn-gold flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2"
               >
                 <Download size={16} />
                 Download
@@ -432,7 +431,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             {!beat.is_free && !beat.release_download && !isAdmin && (
               <button
                 onClick={handleDownload}
-                className="flex-1 py-3 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#111] border border-[#222] text-[#666]"
+                className="flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#111] border border-[#222] text-[#666]"
               >
                 <Lock size={16} />
                 Locked
@@ -443,12 +442,12 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               title={beat.title}
               text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
               url={window.location.href}
-              className="px-4 py-3 rounded-xl bg-[#1a1a1a] text-[#888] hover:text-white"
+              className="px-4 py-3 rounded-xl bg-[#1a1a1a] text-[#888] hover:text-white flex-shrink-0"
             />
           </div>
 
           {isAdmin && (
-            <div className="border-t border-[#1a1a1a] pt-4 space-y-3">
+            <div className="border-t border-[#1a1a1a] pt-4 space-y-3 w-full max-w-full overflow-x-hidden">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => toggleQuickAdmin({ hidden: !adminForm.hidden })}
@@ -470,7 +469,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               </div>
 
               {showAdminControls && (
-                <div className="space-y-3">
+                <div className="space-y-3 w-full max-w-full overflow-x-hidden">
                   <input
                     className="input-dark w-full px-4 py-3 text-sm"
                     value={adminForm.title}
@@ -488,34 +487,11 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
                     placeholder="Price"
                   />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      className="input-dark w-full px-3 py-2 text-xs"
-                      value={adminForm.genre}
-                      onChange={(event) => updateAdminForm('genre', event.target.value)}
-                      placeholder="Genre tags"
-                    />
-
-                    <input
-                      className="input-dark w-full px-3 py-2 text-xs"
-                      value={adminForm.style}
-                      onChange={(event) => updateAdminForm('style', event.target.value)}
-                      placeholder="Style tags"
-                    />
-
-                    <input
-                      className="input-dark w-full px-3 py-2 text-xs"
-                      value={adminForm.type}
-                      onChange={(event) => updateAdminForm('type', event.target.value)}
-                      placeholder="Type tags"
-                    />
-
-                    <input
-                      className="input-dark w-full px-3 py-2 text-xs"
-                      value={adminForm.vibe}
-                      onChange={(event) => updateAdminForm('vibe', event.target.value)}
-                      placeholder="Vibe tags"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input className="input-dark w-full px-3 py-2 text-xs" value={adminForm.genre} onChange={(event) => updateAdminForm('genre', event.target.value)} placeholder="Genre tags" />
+                    <input className="input-dark w-full px-3 py-2 text-xs" value={adminForm.style} onChange={(event) => updateAdminForm('style', event.target.value)} placeholder="Style tags" />
+                    <input className="input-dark w-full px-3 py-2 text-xs" value={adminForm.type} onChange={(event) => updateAdminForm('type', event.target.value)} placeholder="Type tags" />
+                    <input className="input-dark w-full px-3 py-2 text-xs" value={adminForm.vibe} onChange={(event) => updateAdminForm('vibe', event.target.value)} placeholder="Vibe tags" />
                   </div>
 
                   <input
@@ -525,19 +501,9 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
                     placeholder="Mood tags"
                   />
 
-                  <textarea
-                    className="input-dark w-full px-4 py-3 text-sm min-h-[90px] resize-none"
-                    value={adminForm.description}
-                    onChange={(event) => updateAdminForm('description', event.target.value)}
-                    placeholder="Description"
-                  />
+                  <textarea className="input-dark w-full px-4 py-3 text-sm min-h-[90px] resize-none" value={adminForm.description} onChange={(event) => updateAdminForm('description', event.target.value)} placeholder="Description" />
 
-                  <textarea
-                    className="input-dark w-full px-4 py-3 text-sm min-h-[70px] resize-none"
-                    value={adminForm.terms}
-                    onChange={(event) => updateAdminForm('terms', event.target.value)}
-                    placeholder="Terms"
-                  />
+                  <textarea className="input-dark w-full px-4 py-3 text-sm min-h-[70px] resize-none" value={adminForm.terms} onChange={(event) => updateAdminForm('terms', event.target.value)} placeholder="Terms" />
 
                   <div className="grid grid-cols-2 gap-2">
                     <AdminToggle label="Free" active={adminForm.is_free} onClick={() => updateAdminForm('is_free', !adminForm.is_free)} />
@@ -545,28 +511,16 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
                     <AdminToggle label="Sold" active={adminForm.sold} onClick={() => updateAdminForm('sold', !adminForm.sold)} />
                     <AdminToggle label="Approved" active={adminForm.admin_approved} onClick={() => updateAdminForm('admin_approved', !adminForm.admin_approved)} />
                     <AdminToggle label="Hidden" active={adminForm.hidden} onClick={() => updateAdminForm('hidden', !adminForm.hidden)} />
-                    <AdminToggle
-                      label="Release DL"
-                      active={adminForm.release_download}
-                      onClick={() => updateAdminForm('release_download', !adminForm.release_download)}
-                    />
+                    <AdminToggle label="Release DL" active={adminForm.release_download} onClick={() => updateAdminForm('release_download', !adminForm.release_download)} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={saveAdminChanges}
-                      disabled={saving}
-                      className="btn-gold py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40"
-                    >
+                    <button onClick={saveAdminChanges} disabled={saving} className="btn-gold py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40">
                       <Save size={14} />
                       {saving ? 'Saving...' : 'Save'}
                     </button>
 
-                    <button
-                      onClick={deleteBeat}
-                      disabled={deleting}
-                      className="bg-red-950/25 border border-red-900/40 text-red-400 py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40"
-                    >
+                    <button onClick={deleteBeat} disabled={deleting} className="bg-red-950/25 border border-red-900/40 text-red-400 py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40">
                       <Trash2 size={14} />
                       {deleting ? 'Deleting...' : 'Delete'}
                     </button>
