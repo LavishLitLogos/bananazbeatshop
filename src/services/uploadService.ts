@@ -1,10 +1,13 @@
-c
+﻿import { supabase } from '../lib/supabase';
+
 export type UploadResult = {
   url: string;
   publicUrl: string;
   path: string;
   storagePath: string;
 };
+
+type UploadKind = 'audio' | 'cover-art' | 'profile-media' | 'submission';
 
 function cleanFileName(name: string) {
   const extension = name.split('.').pop()?.toLowerCase() || 'file';
@@ -21,7 +24,7 @@ function cleanFileName(name: string) {
 async function uploadToBucket(
   file: File,
   folder: string,
-  kind: 'audio' | 'cover-art' | 'profile-media'
+  kind: UploadKind
 ): Promise<UploadResult> {
   const fileName = cleanFileName(file.name);
   const storagePath = `${folder}/${fileName}`;
@@ -34,40 +37,30 @@ async function uploadToBucket(
       contentType: file.type || undefined,
     });
 
-  if (error) {
-    throw new Error(error.message || `${kind} upload failed.`);
-  }
+  if (error) throw new Error(error.message);
+
+  const savedPath = data?.path || storagePath;
 
   const { data: publicData } = supabase.storage
     .from('bananaz-media')
-    .getPublicUrl(data?.path || storagePath);
-
-  const publicUrl = publicData?.publicUrl;
-
-  if (!publicUrl) {
-    throw new Error(`${kind} uploaded, but no public URL was returned.`);
-  }
+    .getPublicUrl(savedPath);
 
   return {
-    url: publicUrl,
-    publicUrl,
-    path: data?.path || storagePath,
-    storagePath: data?.path || storagePath,
+    url: publicData.publicUrl,
+    publicUrl: publicData.publicUrl,
+    path: savedPath,
+    storagePath: savedPath
   };
 }
 
-export async function uploadAudio(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'audio', 'audio');
-}
+export const uploadAudio = (file: File) =>
+  uploadToBucket(file, 'audio', 'audio');
 
-export async function uploadCoverArt(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'covers', 'cover-art');
-}
+export const uploadCoverArt = (file: File) =>
+  uploadToBucket(file, 'covers', 'cover-art');
 
-export async function uploadProfileMedia(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'profile', 'profile-media');
-}
+export const uploadProfileMedia = (file: File) =>
+  uploadToBucket(file, 'profile', 'profile-media');
 
-export async function uploadSubmissionFile(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'submissions', 'submission');
-}
+export const uploadSubmissionFile = (file: File) =>
+  uploadToBucket(file, 'submissions', 'submission');
