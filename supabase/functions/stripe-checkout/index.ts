@@ -1,274 +1,139 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+﻿import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
-type StripeOrderUpdate = {
-  status: string;
-  payment_received: boolean;
-  payment_status: string;
-  stripe_session_id: string | null;
-  stripe_payment_intent_id: string | null;
-  stripe_customer_email: string | null;
-  paid_at: string | null;
-  release_download: false;
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
-const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2024-12-18.acacia',
-  appInfo: {
-    name: 'ThisBeatIzBananaz Beat Shop',
-    version: '1.0.0',
-  },
-});
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
+      ...corsHeaders,
       'Content-Type': 'application/json',
     },
   });
 }
 
-function getRequiredEnv(value: string, label: string): string {
-  if (!value) {
-    throw new Error(`${label} is not configured.`);
+function cleanAmount(value: unknown): number {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Invalid checkout amount.');
   }
-
-  return value;
-}
-
-function parseOrderIds(value: unknown): string[] {
-  if (typeof value !== 'string') {
-    return [];
-  }
-
-  return value
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean);
-}
-
-function getSessionOrderIds(session: Stripe.Checkout.Session): string[] {
-  const metadataOrderIds = parseOrderIds(session.metadata?.order_ids);
-
-  if (metadataOrderIds.length > 0) {
-    return metadataOrderIds;
-  }
-
-  return parseOrderIds(session.payment_intent && typeof session.payment_intent !== 'string'
-    ? session.payment_intent.metadata?.order_ids
-    : undefined);
-}
-
-function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
-  if (!session.payment_intent) {
-    return null;
-  }
-
-  if (typeof session.payment_intent === 'string') {
-    return session.payment_intent;
-  }
-
-  return session.payment_intent.id;
-}
-
-async function updateOrdersFromPaidSession(session: Stripe.Checkout.Session): Promise<void> {
-  const orderIds = getSessionOrderIds(session);
-
-  if (orderIds.length === 0) {
-    console.warn('Stripe webhook received paid checkout session with no order_ids metadata.');
-    return;
-  }
-
-  const update: StripeOrderUpdate = {
-    status: 'Paid - Awaiting Admin Release',
-    payment_received: true,
-    payment_status: session.payment_status || 'paid',
-    stripe_session_id: session.id,
-    stripe_payment_intent_id: paymentIntentIdFromSession(session),
-    stripe_customer_email: session.customer_email || session.customer_details?.email || null,
-    paid_at: new Date().toISOString(),
-    release_download: false,
-  };
-
-  const { error } = await supabase
-    .from('orders')
-    .update(update)
-    .in('id', orderIds);
-
-  if (error) {
-    throw new Error(`Unable to update Stripe order payment status: ${error.message}`);
-  }
-
-  await createAdminNotification({
-    orderIds,
-    session,
-  });
-}
-
-async function updateOrdersFromExpiredSession(session: Stripe.Checkout.Session): Promise<void> {
-  const orderIds = getSessionOrderIds(session);
-
-  if (orderIds.length === 0) {
-    return;
-  }
-
-  const { error } = await supabase
-    .from('orders')
-    .update({
-      status: 'Stripe Checkout Expired',
-      payment_received: false,
-      payment_status: 'expired',
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentIdFromSession(session),
-      release_download: false,
-    })
-    .in('id', orderIds);
-
-  if (error) {
-    throw new Error(`Unable to mark Stripe checkout expired: ${error.message}`);
-  }
-}
-
-async function createAdminNotification(params: {
-  orderIds: string[];
-  session: Stripe.Checkout.Session;
-}): Promise<void> {
-  const amountTotal = typeof params.session.amount_total === 'number'
-    ? params.session.amount_total / 100
-    : 0;
-  const buyerEmail = params.session.customer_email || params.session.customer_details?.email || 'unknown buyer';
-
-  const { error } = await supabase.from('notifications').insert({
-    type: 'sale',
-    title: 'Stripe payment received',
-    body: `Stripe payment received from ${buyerEmail} for $${amountTotal.toFixed(2)}. Download is still locked until admin release.`,
-    data: {
-      order_ids: params.orderIds,
-      stripe_session_id: params.session.id,
-      stripe_payment_intent_id: paymentIntentIdFromSession(params.session),
-      buyer_email: buyerEmail,
-      amount_total: amountTotal,
-      download_release: 'admin_only',
-    },
-  });
-
-  if (error) {
-    console.warn('Stripe webhook updated orders, but notification failed:', error.message);
-  }
-}
-
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  if (session.payment_status === 'paid') {
-    await updateOrdersFromPaidSession(session);
-    return;
-  }
-
-  const orderIds = getSessionOrderIds(session);
-
-  if (orderIds.length === 0) {
-    return;
-  }
-
-  const { error } = await supabase
-    .from('orders')
-    .update({
-      status: 'Stripe Checkout Complete - Payment Pending',
-      payment_received: false,
-      payment_status: session.payment_status || 'unpaid',
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentIdFromSession(session),
-      release_download: false,
-    })
-    .in('id', orderIds);
-
-  if (error) {
-    throw new Error(`Unable to update pending Stripe checkout: ${error.message}`);
-  }
-}
-
-async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
-  const orderIds = parseOrderIds(paymentIntent.metadata?.order_ids);
-
-  if (orderIds.length === 0) {
-    return;
-  }
-
-  const { error } = await supabase
-    .from('orders')
-    .update({
-      status: 'Paid - Awaiting Admin Release',
-      payment_received: true,
-      payment_status: 'paid',
-      stripe_payment_intent_id: paymentIntent.id,
-      paid_at: new Date().toISOString(),
-      release_download: false,
-    })
-    .in('id', orderIds);
-
-  if (error) {
-    throw new Error(`Unable to update Stripe payment intent status: ${error.message}`);
-  }
-}
-
-async function handleStripeEvent(event: Stripe.Event): Promise<void> {
-  switch (event.type) {
-    case 'checkout.session.completed':
-    case 'checkout.session.async_payment_succeeded':
-      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
-      break;
-
-    case 'checkout.session.expired':
-      await updateOrdersFromExpiredSession(event.data.object as Stripe.Checkout.Session);
-      break;
-
-    case 'payment_intent.succeeded':
-      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
-      break;
-
-    default:
-      break;
-  }
+  return Math.round(amount * 100);
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
+  if (request.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed.' }, 405);
   }
 
   try {
-    getRequiredEnv(stripeSecretKey, 'STRIPE_SECRET_KEY');
-    getRequiredEnv(stripeWebhookSecret, 'STRIPE_WEBHOOK_SECRET');
-    getRequiredEnv(supabaseUrl, 'SUPABASE_URL');
-    getRequiredEnv(supabaseServiceRoleKey, 'SUPABASE_SERVICE_ROLE_KEY');
-
-    const signature = request.headers.get('stripe-signature');
-
-    if (!signature) {
-      return jsonResponse({ error: 'Missing Stripe signature.' }, 400);
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    if (!stripeSecretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
 
-    const payload = await request.text();
-    const event = await stripe.webhooks.constructEventAsync(
-      payload,
-      signature,
-      stripeWebhookSecret,
-    );
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2024-12-18.acacia',
+      appInfo: {
+        name: 'ThisBeatIzBananaz Beat Shop',
+        version: '1.0.0',
+      },
+    });
 
-    await handleStripeEvent(event);
+    const body = await request.json();
+    const origin = request.headers.get('origin') || '';
 
-    return jsonResponse({ received: true });
+    const successUrl =
+      typeof body.successUrl === 'string' && body.successUrl
+        ? body.successUrl
+        : `${origin}/?checkout=success`;
+
+    const cancelUrl =
+      typeof body.cancelUrl === 'string' && body.cancelUrl
+        ? body.cancelUrl
+        : `${origin}/?checkout=cancelled`;
+
+    const buyerEmail =
+      typeof body.buyerEmail === 'string'
+        ? body.buyerEmail
+        : typeof body.buyer_email === 'string'
+          ? body.buyer_email
+          : undefined;
+
+    const items = Array.isArray(body.items)
+      ? body.items
+      : [
+          {
+            beat_id: body.beatId,
+            beat_name: body.beatTitle,
+            beat_thumbnail: body.beatThumbnail,
+            amount: body.amount,
+          },
+        ];
+
+    if (items.length === 0) {
+      throw new Error('No checkout items provided.');
+    }
+
+    const lineItems = items.map((item: any) => {
+      const title = String(item.beat_name || item.beatTitle || 'Beat License');
+      const image = item.beat_thumbnail || item.beatThumbnail;
+
+      return {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: cleanAmount(item.amount),
+          product_data: {
+            name: title,
+            images: typeof image === 'string' && image.startsWith('http') ? [image] : [],
+          },
+        },
+      };
+    });
+
+    const orderIds = items
+      .map((item: any) => item.order_id || item.orderId)
+      .filter(Boolean)
+      .join(',');
+
+    const beatIds = items
+      .map((item: any) => item.beat_id || item.beatId)
+      .filter(Boolean)
+      .join(',');
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      customer_email: buyerEmail,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        source: String(body.source || 'beat_checkout'),
+        order_ids: orderIds,
+        beat_ids: beatIds,
+        buyer_name: String(body.buyerName || body.buyer_name || ''),
+        buyer_email: String(buyerEmail || ''),
+      },
+      payment_intent_data: {
+        metadata: {
+          order_ids: orderIds,
+          beat_ids: beatIds,
+        },
+      },
+    });
+
+    return jsonResponse({ url: session.url });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Stripe webhook failed.';
-
+    const message = error instanceof Error ? error.message : 'Stripe checkout failed.';
     return jsonResponse({ error: message }, 400);
   }
 });
