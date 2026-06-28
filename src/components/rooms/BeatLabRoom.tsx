@@ -13,7 +13,6 @@ import {
   Share2,
   ShoppingBag,
   SlidersHorizontal,
-  Star,
   Trash2,
   X,
 } from 'lucide-react';
@@ -703,18 +702,6 @@ function BeatCard({
         </div>
 
         <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-          {!beat.no_sharing && (
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                onShare();
-              }}
-              className="w-7 h-7 rounded-lg bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518] flex items-center justify-center transition-all"
-              title="Share"
-            >
-              <Share2 size={12} />
-            </button>
-          )}
 
           <button
             onClick={(event) => {
@@ -807,13 +794,13 @@ function BeatCard({
           ))}
         </div>
 
-        <div className="grid grid-cols-4 gap-1 mt-2">
+        <div className="grid grid-cols-3 gap-2 mt-2">
           <button
             onClick={(event) => {
               event.stopPropagation();
               onPlay();
             }}
-            className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
+            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
             title="Play / Pause"
           >
             {isCurrentlyPlaying ? <Pause size={12} /> : <Play size={12} />}
@@ -822,21 +809,10 @@ function BeatCard({
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onQueue();
-            }}
-            className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
-            title="Play from here"
-          >
-            <Star size={12} />
-          </button>
-
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
               onShare();
             }}
             disabled={beat.no_sharing}
-            className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
             title="Share"
           >
             <Share2 size={12} />
@@ -847,7 +823,7 @@ function BeatCard({
               event.stopPropagation();
               onPopOut();
             }}
-            className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
+            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
             title="Pop out"
           >
             <ExternalLink size={12} />
