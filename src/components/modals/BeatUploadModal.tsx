@@ -583,10 +583,61 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
               Status Toggles
             </div>
 
-            <ToggleRow label="Approved" description="Visible as approved content." checked={form.admin_approved} disabled={locked} onChange={() => toggleField('admin_approved')} />
-            <ToggleRow label="Hidden" description="Hide from buyer-facing rooms." checked={form.hidden} disabled={locked} onChange={() => toggleField('hidden')} />
-            <ToggleRow label="Sold" description="Mark as no longer available." checked={form.sold} disabled={locked} onChange={() => toggleField('sold')} />
-            <ToggleRow label="Release Download" description="Admin unlock flag for download access." checked={form.release_download} disabled={locked} onChange={() => toggleField('release_download')} />
+            <ToggleRow
+              label="Free"
+              description="Send this to Free DLs and force price to $0."
+              checked={form.room_mode === 'free'}
+              disabled={locked}
+              onChange={() => setRoomMode(form.room_mode === 'free' ? 'beat' : 'free')}
+            />
+
+            <ToggleRow
+              label="Exclusive"
+              description="Send this to Exclusives."
+              checked={form.room_mode === 'exclusive'}
+              disabled={locked}
+              onChange={() => setRoomMode(form.room_mode === 'exclusive' ? 'beat' : 'exclusive')}
+            />
+
+            <ToggleRow
+              label="Produced By"
+              description="Send this to Produced By."
+              checked={form.room_mode === 'prodby'}
+              disabled={locked || isEdit}
+              onChange={() => setRoomMode(form.room_mode === 'prodby' ? 'beat' : 'prodby')}
+            />
+
+            <ToggleRow
+              label="Approved"
+              description="Visible as approved content."
+              checked={form.admin_approved}
+              disabled={locked}
+              onChange={() => toggleField('admin_approved')}
+            />
+
+            <ToggleRow
+              label="Hidden"
+              description="Hide from buyer-facing rooms."
+              checked={form.hidden}
+              disabled={locked}
+              onChange={() => toggleField('hidden')}
+            />
+
+            <ToggleRow
+              label="Sold"
+              description="Mark as no longer available."
+              checked={form.sold}
+              disabled={locked}
+              onChange={() => toggleField('sold')}
+            />
+
+            <ToggleRow
+              label="Release Download"
+              description="Admin unlock flag for download access."
+              checked={form.release_download}
+              disabled={locked}
+              onChange={() => toggleField('release_download')}
+            />
           </div>
 
           <div className="sticky bottom-0 z-20 -mx-4 mt-5 flex flex-col gap-3 border-t border-[#222] bg-[#0b0b0b]/95 px-4 pt-4 pb-1 backdrop-blur-xl">
