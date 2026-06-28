@@ -7,7 +7,7 @@ export type UploadResult = {
   storagePath: string;
 };
 
-type UploadKind = 'audio' | 'cover-art' | 'profile-media' | 'submission';
+type UploadBucket = 'audio' | 'covers' | 'profile' | 'profile-media' | 'submissions' | 'videos';
 
 function cleanFileName(name: string) {
   const extension = name.split('.').pop()?.toLowerCase() || 'file';
@@ -21,46 +21,55 @@ function cleanFileName(name: string) {
   return `${base || 'upload'}-${Date.now()}.${extension}`;
 }
 
-async function uploadToBucket(
-  file: File,
-  folder: string,
-  kind: UploadKind
-): Promise<UploadResult> {
+async function uploadToBucket(file: File, bucket: UploadBucket): Promise<UploadResult> {
   const fileName = cleanFileName(file.name);
-  const storagePath = `${folder}/${fileName}`;
+  const storagePath = fileName;
 
   const { data, error } = await supabase.storage
-    .from('bananaz-media')
+    .from(bucket)
     .upload(storagePath, file, {
       cacheControl: '3600',
       upsert: false,
       contentType: file.type || undefined,
     });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message || `Upload failed in ${bucket}.`);
+  }
 
   const savedPath = data?.path || storagePath;
 
   const { data: publicData } = supabase.storage
-    .from('bananaz-media')
+    .from(bucket)
     .getPublicUrl(savedPath);
 
+  const publicUrl = publicData?.publicUrl;
+
+  if (!publicUrl) {
+    throw new Error(`Upload saved in ${bucket}, but no public URL returned.`);
+  }
+
   return {
-    url: publicData.publicUrl,
-    publicUrl: publicData.publicUrl,
+    url: publicUrl,
+    publicUrl,
     path: savedPath,
-    storagePath: savedPath
+    storagePath: savedPath,
   };
 }
 
-export const uploadAudio = (file: File) =>
-  uploadToBucket(file, 'audio', 'audio');
+export function uploadAudio(file: File): Promise<UploadResult> {
+  return uploadToBucket(file, 'audio');
+}
 
-export const uploadCoverArt = (file: File) =>
-  uploadToBucket(file, 'covers', 'cover-art');
+export function uploadCoverArt(file: File): Promise<UploadResult> {
+  return uploadToBucket(file, 'covers');
+}
 
-export const uploadProfileMedia = (file: File) =>
-  uploadToBucket(file, 'profile', 'profile-media');
+export function uploadProfileMedia(file: File): Promise<UploadResult> {
+  const bucket = file.type.startsWith('video/') ? 'videos' : 'profile-media';
+  return uploadToBucket(file, bucket);
+}
 
-export const uploadSubmissionFile = (file: File) =>
-  uploadToBucket(file, 'submissions', 'submission');
+export function uploadSubmissionFile(file: File): Promise<UploadResult> {
+  return uploadToBucket(file, 'submissions');
+}
