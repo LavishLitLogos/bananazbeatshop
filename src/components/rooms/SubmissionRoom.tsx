@@ -17,7 +17,6 @@ import {
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import { uploadSubmissionFile } from '../../services/uploadService';
-import { appStorage } from '../../services/appStorage';
 import type { Submission } from '../../types';
 
 type SubmissionView = 'form' | 'success';
@@ -81,29 +80,13 @@ export function SubmissionRoom() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [busySubId, setBusySubId] = useState<string | null>(null);
-  const [allowSubmissions, setAllowSubmissions] = useState(
-    () => appStorage.getAdminSettings().allowSubmissions
-  );
 
   const hasAdminAccess = Boolean(isAdmin);
+
   const selectedFileLabel = useMemo(() => {
     if (!form.file) return 'Choose audio/media file';
     return form.file.name;
   }, [form.file]);
-
-  useEffect(() => {
-    const syncSettings = () => {
-      setAllowSubmissions(appStorage.getAdminSettings().allowSubmissions);
-    };
-
-    window.addEventListener('storage', syncSettings);
-    window.addEventListener('bananaz-app-storage:update', syncSettings);
-
-    return () => {
-      window.removeEventListener('storage', syncSettings);
-      window.removeEventListener('bananaz-app-storage:update', syncSettings);
-    };
-  }, []);
 
   const fetchSubmissions = useCallback(async () => {
     if (!hasAdminAccess) return;
@@ -168,11 +151,6 @@ export function SubmissionRoom() {
   };
 
   const validateForm = () => {
-    if (!allowSubmissions) {
-      addToast('Submissions are currently closed.', 'info');
-      return false;
-    }
-
     if (!form.buyer_name.trim()) {
       addToast('Name is required.', 'error');
       return false;
@@ -351,7 +329,9 @@ export function SubmissionRoom() {
                 <img src="/assets/icons/grab-icon.png" alt="" className="w-5 h-5 object-contain" />
                 Submission Room
               </h1>
-              <p className="text-[10px] text-[#555] mt-0.5">Public uploads route to the admin inbox only</p>
+              <p className="text-[10px] text-[#555] mt-0.5">
+                Public uploads route to the admin inbox only
+              </p>
             </div>
           </div>
 
@@ -431,12 +411,16 @@ export function SubmissionRoom() {
                 {submission.admin_notes && (
                   <div className="rounded-xl bg-[#0d0d0d] border border-[#1e1e1e] px-3 py-2">
                     <div className="text-[10px] text-[#555] uppercase tracking-[0.18em] mb-1">Notes</div>
-                    <p className="text-xs text-[#aaa] whitespace-pre-wrap leading-relaxed">{submission.admin_notes}</p>
+                    <p className="text-xs text-[#aaa] whitespace-pre-wrap leading-relaxed">
+                      {submission.admin_notes}
+                    </p>
                   </div>
                 )}
 
                 <div className="rounded-xl bg-[#0d0d0d] border border-[#1e1e1e] px-3 py-2">
-                  <div className="text-[10px] text-[#555] uppercase tracking-[0.18em] mb-2">Attached File</div>
+                  <div className="text-[10px] text-[#555] uppercase tracking-[0.18em] mb-2">
+                    Attached File
+                  </div>
 
                   {submission.song_file_url ? (
                     <a
@@ -577,80 +561,75 @@ export function SubmissionRoom() {
                   className="w-20 h-20 object-contain mx-auto"
                 />
 
-                <h2 className="font-display text-2xl font-900 text-white uppercase">Submit Your Song</h2>
+                <h2 className="font-display text-2xl font-900 text-white uppercase">
+                  Submit Your Song
+                </h2>
 
                 <p className="text-[#888] text-sm leading-relaxed">
-                  {allowSubmissions
-                    ? 'Upload your finished cookup for review. Submissions go straight to the private admin inbox and never auto-publish.'
-                    : 'Submissions are currently closed. Check back soon for the next opening.'}
+                  Upload your finished cookup for review. Submissions go straight to the private
+                  admin inbox and never auto-publish.
                 </p>
               </div>
 
-              {!allowSubmissions ? (
-                <div className="beat-card p-5 text-center">
-                  <XCircle size={34} className="mx-auto text-[#f5c518] mb-3" />
-                  <div className="font-display text-xl font-900 uppercase text-white">
-                    Submissions Closed
-                  </div>
-                  <p className="text-sm text-[#777] mt-2 leading-relaxed">
-                    The inbox is locked for now. When submissions reopen, this room will accept uploads again.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
+              <div className="space-y-3">
+                <input
+                  className="input-dark w-full px-4 py-3 text-sm"
+                  placeholder="Name"
+                  value={form.buyer_name}
+                  onChange={(event) => updateForm('buyer_name', event.target.value)}
+                />
+
+                <input
+                  className="input-dark w-full px-4 py-3 text-sm"
+                  placeholder="Email / contact"
+                  value={form.buyer_email}
+                  onChange={(event) => updateForm('buyer_email', event.target.value)}
+                />
+
+                <input
+                  className="input-dark w-full px-4 py-3 text-sm"
+                  placeholder="Title"
+                  value={form.song_title}
+                  onChange={(event) => updateForm('song_title', event.target.value)}
+                />
+
+                <textarea
+                  className="input-dark w-full px-4 py-3 text-sm min-h-[110px] resize-none"
+                  placeholder="Notes"
+                  value={form.notes}
+                  onChange={(event) => updateForm('notes', event.target.value)}
+                />
+
+                <label className="block cursor-pointer">
                   <input
-                    className="input-dark w-full px-4 py-3 text-sm"
-                    placeholder="Name"
-                    value={form.buyer_name}
-                    onChange={(event) => updateForm('buyer_name', event.target.value)}
+                    type="file"
+                    className="hidden"
+                    accept="audio/*,video/*"
+                    onChange={handleFileChange}
                   />
 
-                  <input
-                    className="input-dark w-full px-4 py-3 text-sm"
-                    placeholder="Email / contact"
-                    value={form.buyer_email}
-                    onChange={(event) => updateForm('buyer_email', event.target.value)}
-                  />
-
-                  <input
-                    className="input-dark w-full px-4 py-3 text-sm"
-                    placeholder="Title"
-                    value={form.song_title}
-                    onChange={(event) => updateForm('song_title', event.target.value)}
-                  />
-
-                  <textarea
-                    className="input-dark w-full px-4 py-3 text-sm min-h-[110px] resize-none"
-                    placeholder="Notes"
-                    value={form.notes}
-                    onChange={(event) => updateForm('notes', event.target.value)}
-                  />
-
-                  <label className="block cursor-pointer">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="audio/*,video/*"
-                      onChange={handleFileChange}
-                    />
-
-                    <div className="rounded-2xl border border-dashed border-[#2a2a2a] bg-[#0d0d0d] px-4 py-5 text-center hover:border-[#f5c518]/40 transition-all">
-                      <Music size={24} className="mx-auto text-[#f5c518] mb-2" />
-                      <div className="text-sm text-white font-medium truncate">{selectedFileLabel}</div>
-                      <div className="text-[11px] text-[#555] mt-1">Audio or video accepted</div>
+                  <div className="rounded-2xl border border-dashed border-[#2a2a2a] bg-[#0d0d0d] px-4 py-5 text-center hover:border-[#f5c518]/40 transition-all">
+                    <Music size={24} className="mx-auto text-[#f5c518] mb-2" />
+                    <div className="text-sm text-white font-medium truncate">
+                      {selectedFileLabel}
                     </div>
-                  </label>
+                    <div className="text-[11px] text-[#555] mt-1">Audio or video accepted</div>
+                  </div>
+                </label>
 
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="btn-gold w-full py-3 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {submitting ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-                    {submitting ? 'Submitting...' : 'Submit'}
-                  </button>
-                </div>
-              )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="btn-gold w-full py-3 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <Upload size={15} />
+                  )}
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center space-y-4 py-8">
@@ -658,10 +637,13 @@ export function SubmissionRoom() {
                 <CheckCircle2 size={32} className="text-[#f5c518]" />
               </div>
 
-              <div className="font-display text-2xl font-900 text-[#f5c518] uppercase">Submitted</div>
+              <div className="font-display text-2xl font-900 text-[#f5c518] uppercase">
+                Submitted
+              </div>
 
               <p className="text-[#888] text-sm leading-relaxed max-w-xs mx-auto">
-                Your file went to the private admin inbox. Nothing publishes unless it gets handled manually.
+                Your file went to the private admin inbox. Nothing publishes unless it gets handled
+                manually.
               </p>
 
               <button onClick={resetForm} className="btn-dark px-6 py-3 rounded-xl text-sm">

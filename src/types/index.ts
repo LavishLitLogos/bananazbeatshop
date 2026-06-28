@@ -78,6 +78,14 @@ export interface ProdBySong {
   cover_art_url?: string;
   description?: string;
   rights_text?: string;
+  // Pricing & release
+  price?: number;
+  is_free?: boolean;
+  release_download?: boolean;
+  // Visibility & flags
+  exclusive?: boolean;
+  no_sharing?: boolean;
+  sold?: boolean;
   hidden: boolean;
   admin_approved?: boolean;
   admin_notes?: string;

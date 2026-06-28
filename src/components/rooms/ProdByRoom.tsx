@@ -23,13 +23,8 @@ import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PROD_BY_ICON = '/assets/icons/skip-icon.png';
 
-interface ProducedSong extends ProdBySong {
-  price?: number;
-  is_free?: boolean;
-  release_download?: boolean;
-  no_sharing?: boolean;
-  sold?: boolean;
-}
+// ProdBySong now has all required fields on the base interface — no local extension needed
+type ProducedSong = ProdBySong;
 
 function getSongCover(song: ProducedSong) {
   return song.cover_art_url || MAIN_LOGO;
@@ -586,6 +581,12 @@ function SongCard({
                   Hidden
                 </span>
               )}
+
+              {song.exclusive && (
+                <span className="px-2 py-1 rounded-lg bg-[#f5c518]/10 border border-[#f5c518]/20 text-[#f5c518] text-[10px] uppercase">
+                  Exclusive
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -616,6 +617,8 @@ function SongUploadModal({
   const [price, setPrice] = useState(Number(song?.price || 0));
   const [isFree, setIsFree] = useState(Boolean(song?.is_free));
   const [released, setReleased] = useState(Boolean(song?.release_download));
+  const [exclusive, setExclusive] = useState(Boolean(song?.exclusive));
+  const [noSharing, setNoSharing] = useState(Boolean(song?.no_sharing));
   const [hidden, setHidden] = useState(Boolean(song?.hidden));
   const [saving, setSaving] = useState(false);
   const [audioUploading, setAudioUploading] = useState(false);
@@ -681,6 +684,8 @@ function SongUploadModal({
       price: isFree ? 0 : Number(price) || 0,
       is_free: isFree,
       release_download: released,
+      exclusive,
+      no_sharing: noSharing,
       admin_approved: true,
       hidden,
     } as any;
@@ -726,7 +731,7 @@ function SongUploadModal({
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/5 text-[#888] hover:text-white"
+            className="w-9 h-9 rounded-full bg-white/5 text-[#888] hover:text-white flex items-center justify-center"
           >
             <X size={16} />
           </button>
@@ -834,8 +839,8 @@ function SongUploadModal({
             className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
           />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <label className="space-y-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <label className="space-y-1 col-span-2 sm:col-span-1">
               <span className="text-[10px] text-[#666] uppercase tracking-widest">
                 Price
               </span>
@@ -849,8 +854,25 @@ function SongUploadModal({
             </label>
 
             <ToggleBox label="Free" active={isFree} onClick={() => setIsFree(!isFree)} />
-            <ToggleBox label="Release" active={released} onClick={() => setReleased(!released)} />
-            <ToggleBox label="Hidden" active={hidden} onClick={() => setHidden(!hidden)} />
+            <ToggleBox label="Release DL" active={released} onClick={() => setReleased(!released)} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <ToggleBox
+              label="Exclusive"
+              active={exclusive}
+              onClick={() => setExclusive(!exclusive)}
+            />
+            <ToggleBox
+              label="No Sharing"
+              active={noSharing}
+              onClick={() => setNoSharing(!noSharing)}
+            />
+            <ToggleBox
+              label="Hidden"
+              active={hidden}
+              onClick={() => setHidden(!hidden)}
+            />
           </div>
 
           <button
