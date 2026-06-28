@@ -330,7 +330,7 @@ export function SubmissionRoom() {
                 Submission Room
               </h1>
               <p className="text-[10px] text-[#555] mt-0.5">
-                Public uploads route to the admin inbox only
+                Will be submitted for review.
               </p>
             </div>
           </div>
@@ -359,7 +359,7 @@ export function SubmissionRoom() {
             </div>
 
             <p className="text-xs text-[#777] mt-2 leading-relaxed">
-              Submissions stay private until manually reviewed. Nothing from this room auto-publishes.
+              Submissions stay private until manually reviewed.
             </p>
           </div>
 
@@ -566,8 +566,7 @@ export function SubmissionRoom() {
                 </h2>
 
                 <p className="text-[#888] text-sm leading-relaxed">
-                  Upload your finished cookup for review. Submissions go straight to the private
-                  admin inbox and never auto-publish.
+                  Upload your finished cookup for review.
                 </p>
               </div>
 
@@ -642,8 +641,7 @@ export function SubmissionRoom() {
               </div>
 
               <p className="text-[#888] text-sm leading-relaxed max-w-xs mx-auto">
-                Your file went to the private admin inbox. Nothing publishes unless it gets handled
-                manually.
+                Your file went to the private admin inbox for approval.
               </p>
 
               <button onClick={resetForm} className="btn-dark px-6 py-3 rounded-xl text-sm">

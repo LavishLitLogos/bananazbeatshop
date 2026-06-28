@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Loader, Music, Upload, X } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
 
-const DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥';
+const DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz ðŸ”¥';
 
 type UploadKind = 'audio' | 'cover';
 type ToggleField = 'hidden' | 'admin_approved' | 'sold' | 'release_download';
@@ -206,7 +206,7 @@ function UploadField({
         <img
           src={currentUrl}
           alt="Artwork preview"
-          className="mt-3 aspect-square w-full max-w-[180px] rounded-xl border border-[#2b2b2b] object-cover"
+          className="mt-3 aspect-square w-full max-w-[180px] rounded-xl border border-[#2b2b2b] object-contain"
         />
       )}
 
@@ -461,7 +461,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
 
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-[#2c2c2c] bg-black">
               {form.cover_art_url ? (
-                <img src={form.cover_art_url} alt="Beat artwork preview" className="h-full w-full object-cover" />
+                <img src={form.cover_art_url} alt="Beat artwork preview" className="h-full w-full object-contain" />
               ) : (
                 <div className="flex h-full items-center justify-center px-4 text-center text-xs uppercase tracking-wider text-[#555]">
                   Upload cover art

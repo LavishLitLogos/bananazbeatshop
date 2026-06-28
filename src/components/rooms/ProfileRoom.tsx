@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   Download,
@@ -18,7 +18,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import { ShareButton } from '../ui/ShareButton';
-import { uploadCoverArt } from '../../services/uploadService';
+import { uploadProfileMedia } from '../../services/uploadService';
 import {
   appStorage,
   type ProducerProfileState,
@@ -324,12 +324,12 @@ export function ProfileRoom() {
     setProfileUploading(true);
 
     try {
-      const result = await uploadCoverArt(file);
+      const result = await uploadProfileMedia(file);
       setProfileImageUrl(result.url);
       saveProfileImageUrl(result.url);
       addToast('Profile image uploaded.', 'success');
     } catch {
-      addToast('Profile image upload failed.', 'error');
+      addToast('Profile image upload failed. Check profile-media storage bucket.', 'error');
     }
 
     setProfileUploading(false);
@@ -347,7 +347,7 @@ export function ProfileRoom() {
     setMediaUploading(true);
 
     try {
-      const result = await uploadCoverArt(file);
+      const result = await uploadProfileMedia(file);
       const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
 
       const { error } = await supabase.from('profile_media').insert({
@@ -368,7 +368,7 @@ export function ProfileRoom() {
       await fetchProfileExtras();
       refreshContent();
     } catch {
-      addToast('Media upload failed.', 'error');
+      addToast('Media upload failed. Check profile-media storage bucket.', 'error');
     }
 
     setMediaUploading(false);
@@ -549,7 +549,7 @@ export function ProfileRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {profile.displayName || 'ThisBeatIzBananaz'} · Producer profile
+                {profile.displayName || 'ThisBeatIzBananaz'} Â· Producer profile
               </p>
             </div>
           </div>
@@ -632,7 +632,7 @@ export function ProfileRoom() {
 
                     {profile.sloganQuote && (
                       <p className="text-sm text-[#d8d8d8] mt-3 leading-relaxed italic">
-                        “{profile.sloganQuote}”
+                        â€œ{profile.sloganQuote}â€
                       </p>
                     )}
                   </div>
@@ -686,7 +686,7 @@ export function ProfileRoom() {
                         )
                       ) : (
                         <div className="text-sm text-[#ddd] leading-relaxed whitespace-pre-wrap">
-                          {row.value || '—'}
+                          {row.value || 'â€”'}
                         </div>
                       )}
                     </div>
@@ -710,7 +710,7 @@ export function ProfileRoom() {
                         />
                       ) : (
                         <div className="text-sm text-[#ddd] leading-relaxed">
-                          {row.value.length > 0 ? joinList(row.value) : '—'}
+                          {row.value.length > 0 ? joinList(row.value) : 'â€”'}
                         </div>
                       )}
                     </div>
@@ -758,7 +758,7 @@ export function ProfileRoom() {
                           Profile Footer
                         </div>
                         <div className="text-sm text-[#ddd]">
-                          Show “Scan the QR” footer
+                          Show â€œScan the QRâ€ footer
                         </div>
                       </div>
 
@@ -813,7 +813,7 @@ export function ProfileRoom() {
                     Partners
                   </h3>
                   <p className="text-[10px] text-[#666]">
-                    Unlimited partner links · 4x4 preview grid
+                    Unlimited partner links Â· 4x4 preview grid
                   </p>
                 </div>
 
@@ -1012,3 +1012,4 @@ export function ProfileRoom() {
     </div>
   );
 }
+

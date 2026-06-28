@@ -1,4 +1,4 @@
-import {
+﻿import {
   Download,
   Eye,
   EyeOff,
@@ -299,7 +299,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
           <div className="aspect-square bg-[#111] rounded-t-xl overflow-hidden">
             {beat.cover_art_url ? (
-              <img src={beat.cover_art_url} alt={beat.title} className="w-full h-full object-cover" />
+              <img src={beat.cover_art_url} alt={beat.title} className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#333]">
                 <MusicIcon />
@@ -440,7 +440,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
             <ShareButton
               title={beat.title}
-              text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
+              text={`Check out "${beat.title}" by ThisBeatIzBananazâ„¢`}
               url={window.location.href}
               className="px-4 py-3 rounded-xl bg-[#1a1a1a] text-[#888] hover:text-white flex-shrink-0"
             />
@@ -551,5 +551,5 @@ function AdminToggle({ label, active, onClick }: { label: string; active: boolea
 }
 
 function MusicIcon() {
-  return <div className="text-6xl">🎵</div>;
+  return <div className="text-6xl">ðŸŽµ</div>;
 }
