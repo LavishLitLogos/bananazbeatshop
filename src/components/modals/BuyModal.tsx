@@ -63,17 +63,17 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
       {
         id: 'stripe',
         label: 'Card / Stripe Checkout',
-        helper: 'Secure checkout opens next. Download stays locked until admin releases it.',
+        helper: 'Secure checkout opens next. Once payment is processed, your download will be available.',
       },
       {
         id: 'cashapp',
-        label: 'Cash App Request',
-        helper: 'Submit the request here, then send payment in Cash App.',
+        label: 'Cash App',
+        helper: 'Open Cash App to pay.',
         destination: DEFAULT_CASHAPP_DESTINATION,
       },
       {
         id: 'paypal',
-        label: 'PayPal Request',
+        label: 'PayPal',
         helper: 'Submit the request here, then send payment in PayPal.',
         destination: DEFAULT_PAYPAL_DESTINATION,
       },
@@ -283,8 +283,7 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
               <div className="flex items-start gap-2">
                 <AlertTriangle size={14} className="text-[#f5c518] flex-shrink-0 mt-0.5" />
                 <div>
-                  Downloads are never unlocked automatically. After payment is verified, admin manually releases the
-                  file to protect the buyer and the producer.
+                  Once payment is processed, your download will be available.
                 </div>
               </div>
             </div>
@@ -344,3 +343,4 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
     </div>
   );
 }
+

@@ -23,12 +23,12 @@ const paymentCopy: Record<PaymentMethod, { label: string; destination: string; h
     helper: 'Pay by card through a secure Stripe checkout page.',
   },
   cashapp: {
-    label: 'Cash App Request',
+    label: 'Cash App',
     destination: CASH_APP_HANDLE,
-    helper: 'Submit the request after sending Cash App payment.',
+    helper: 'Open Cash App to pay.',
   },
   paypal: {
-    label: 'PayPal Request',
+    label: 'PayPal',
     destination: PAYPAL_EMAIL,
     helper: 'Submit the request after sending PayPal payment.',
   },
@@ -100,7 +100,7 @@ export function BeatBoxCart() {
     await supabase.from('notifications').insert({
       type: 'sale',
       title: `New Beat Box Order: ${cart.length} beat${cart.length === 1 ? '' : 's'}`,
-      body: `${form.name.trim()} submitted a ${selectedPayment.label} order for ${money(total)}. Downloads stay locked until admin release.`,
+      body: `${form.name.trim()} submitted a ${selectedPayment.label} order for ${money(total)}. Once payment is processed, your download will be available.`,
       data: {
         order_ids: data.map((order) => order.id),
         buyer_email: form.email.trim().toLowerCase(),
@@ -312,14 +312,14 @@ export function BeatBoxCart() {
               <div className="p-3 bg-[#0d0d0d] rounded-xl border border-[#1e1e1e] text-xs text-[#888] leading-relaxed flex gap-2">
                 <Lock size={15} className="text-[#f5c518] flex-shrink-0 mt-0.5" />
                 <span>
-                  Downloads stay locked after purchase. Admin release is required before any beat files become available.
+                  Once payment is processed, your download will be available.
                 </span>
               </div>
 
               {form.method !== 'stripe' && (
                 <div className="text-center text-sm text-[#888] leading-relaxed">
                   Send <span className="text-[#f5c518] font-bold">{money(total)}</span> to{' '}
-                  <span className="text-white font-bold">{selectedPayment.destination}</span>, then submit this request for manual verification.
+                  <span className="text-white font-bold">{selectedPayment.destination}</span>, then Pay using the selected method.
                 </div>
               )}
 
@@ -330,7 +330,7 @@ export function BeatBoxCart() {
                 className="btn-gold w-full py-3 rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {form.method === 'stripe' ? <CreditCard size={16} /> : <Mail size={16} />}
-                {loading ? 'Processing...' : form.method === 'stripe' ? 'Continue to Stripe' : 'Submit Payment Request'}
+                {loading ? 'Processing...' : form.method === 'stripe' ? 'Continue to Stripe' : 'Continue to Payment'}
               </button>
 
               <button
@@ -350,7 +350,7 @@ export function BeatBoxCart() {
               </div>
               <div className="font-display text-2xl font-900 text-[#f5c518] uppercase tracking-wide">Order Submitted</div>
               <p className="text-[#888] text-sm leading-relaxed max-w-xs mx-auto">
-                {orderCount} beat request{orderCount === 1 ? '' : 's'} logged. Downloads remain locked until admin verifies payment and releases the files.
+                {orderCount} beat request{orderCount === 1 ? '' : 's'} logged. Once payment is processed, your download will be available.
               </p>
               <button type="button" onClick={closeCart} className="btn-gold px-8 py-3 rounded-xl text-sm">
                 Done
@@ -362,3 +362,4 @@ export function BeatBoxCart() {
     </div>
   );
 }
+
