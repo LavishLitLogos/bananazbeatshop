@@ -440,7 +440,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
             <ShareButton
               title={beat.title}
-              text={`Check out "${beat.title}" by ThisBeatIzBananazâ„¢`}
+              text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
               url={window.location.href}
               className="px-4 py-3 rounded-xl bg-[#1a1a1a] text-[#888] hover:text-white flex-shrink-0"
             />
@@ -551,5 +551,12 @@ function AdminToggle({ label, active, onClick }: { label: string; active: boolea
 }
 
 function MusicIcon() {
-  return <div className="text-6xl">ðŸŽµ</div>;
+  return (
+    <img
+      src="https://pub-e227770267fa4d06ad83201dcfde8d6b.r2.dev/play-icon.png"
+      alt=""
+      className="w-20 h-20 object-contain opacity-40 select-none pointer-events-none"
+      draggable={false}
+    />
+  );
 }

@@ -632,7 +632,7 @@ export function ProfileRoom() {
 
                     {profile.sloganQuote && (
                       <p className="text-sm text-[#d8d8d8] mt-3 leading-relaxed italic">
-                        â€œ{profile.sloganQuote}â€
+                        "{profile.sloganQuote}"
                       </p>
                     )}
                   </div>
@@ -686,7 +686,7 @@ export function ProfileRoom() {
                         )
                       ) : (
                         <div className="text-sm text-[#ddd] leading-relaxed whitespace-pre-wrap">
-                          {row.value || 'â€”'}
+                          {row.value || '-'}
                         </div>
                       )}
                     </div>
@@ -710,7 +710,7 @@ export function ProfileRoom() {
                         />
                       ) : (
                         <div className="text-sm text-[#ddd] leading-relaxed">
-                          {row.value.length > 0 ? joinList(row.value) : 'â€”'}
+                          {row.value.length > 0 ? joinList(row.value) : '-'}
                         </div>
                       )}
                     </div>
@@ -758,7 +758,7 @@ export function ProfileRoom() {
                           Profile Footer
                         </div>
                         <div className="text-sm text-[#ddd]">
-                          Show â€œScan the QRâ€ footer
+                          Show "Scan the QRs" footer
                         </div>
                       </div>
 

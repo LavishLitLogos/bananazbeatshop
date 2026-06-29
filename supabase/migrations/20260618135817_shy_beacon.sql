@@ -150,7 +150,7 @@ AND s.deleted_at IS NULL;
 GRANT SELECT ON stripe_user_subscriptions TO authenticated;
 
 -- View for user orders
-CREATE VIEW stripe_user_orders WITH (security_invoker) AS
+CREATE VIEW stripe_user_orders WITH (security_invoker = true) AS
 SELECT
     c.customer_id,
     o.id as order_id,

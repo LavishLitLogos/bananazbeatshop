@@ -152,6 +152,8 @@ async function syncCustomerFromStripe(customerId: string) {
         console.error('Error updating subscription status:', noSubError);
         throw new Error('Failed to update subscription status in database');
       }
+
+      return;
     }
 
     // assumes that a customer can only have a single subscription

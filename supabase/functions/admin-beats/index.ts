@@ -22,10 +22,19 @@ Deno.serve(async (req) => {
 
   // Verify admin token
   const adminToken = req.headers.get('X-Admin-Token');
-  if (adminToken !== ADMIN_PASSCODE) {
+
+  const VALID_ADMIN_CODES = new Set([
+    'rwmg25',
+    'GLOKEY',
+  ]);
+
+  if (!adminToken || !VALID_ADMIN_CODES.has(adminToken)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
     });
   }
 

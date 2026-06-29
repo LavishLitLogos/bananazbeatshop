@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
 
-const DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz ðŸ”¥';
+const DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥';
 
 type UploadKind = 'audio' | 'cover';
 type ToggleField = 'hidden' | 'admin_approved' | 'sold' | 'release_download';

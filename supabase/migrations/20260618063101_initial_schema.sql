@@ -12,6 +12,9 @@ CREATE TABLE beats (
   exclusive boolean DEFAULT false,
   bananaz_exclusive boolean DEFAULT false,
   no_sharing boolean DEFAULT false,
+  hidden boolean DEFAULT false,
+  admin_approved boolean DEFAULT true,
+  admin_notes text,
   style text,
   vibe text,
   genre text,
@@ -19,7 +22,7 @@ CREATE TABLE beats (
   mood text,
   artist_suggestion text,
   description text,
-  terms text DEFAULT 'USUABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥',
+  terms text DEFAULT 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -44,6 +47,9 @@ CREATE TABLE orders (
   status text DEFAULT 'Pending Verification',
   release_download boolean DEFAULT false,
   sold boolean DEFAULT false,
+  admin_approved boolean DEFAULT false,
+  admin_notes text,
+  payment_received boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -62,6 +68,9 @@ CREATE TABLE beat_tapes (
   price numeric(10,2) DEFAULT 0,
   is_free boolean DEFAULT false,
   colab_usable boolean DEFAULT false,
+  hidden boolean DEFAULT false,
+  admin_approved boolean DEFAULT true,
+  admin_notes text,
   description text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -98,6 +107,15 @@ CREATE TABLE prod_by_songs (
   cover_art_url text,
   description text,
   rights_text text DEFAULT 'All rights reserved. Rawheart Waymakerz Music Group© 2026.',
+  price numeric(10,2) DEFAULT 0,
+  is_free boolean DEFAULT false,
+  release_download boolean DEFAULT false,
+  exclusive boolean DEFAULT false,
+  no_sharing boolean DEFAULT false,
+  sold boolean DEFAULT false,
+  hidden boolean DEFAULT false,
+  admin_approved boolean DEFAULT true,
+  admin_notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -121,6 +139,7 @@ CREATE TABLE lab_messages (
   reactions jsonb DEFAULT '{}',
   reply_to uuid,
   is_automated boolean DEFAULT false,
+  admin_approved boolean DEFAULT true,
   created_at timestamptz DEFAULT now()
 );
 
@@ -162,11 +181,12 @@ CREATE TABLE app_settings (
   payment_methods jsonb DEFAULT '{"paypal": "daddygangthreads@gmail.com", "cashapp": "$RoyceRipken"}',
   profile jsonb DEFAULT '{}',
   social_links jsonb DEFAULT '{}',
-  leasing_terms text DEFAULT 'USUABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥',
+  leasing_terms text DEFAULT 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥',
   notification_email text DEFAULT 'thisbeatizbananaz@gmail.com',
   automated_comments_enabled boolean DEFAULT true,
   bananaz_mode_settings jsonb DEFAULT '{"colorTheme": "gold", "active": false}',
   famz_count integer DEFAULT 11603,
+  sales_count integer DEFAULT 0,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
