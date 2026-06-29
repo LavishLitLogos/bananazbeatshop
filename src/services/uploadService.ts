@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export type UploadResult = {
   url: string;
@@ -7,7 +7,7 @@ export type UploadResult = {
   storagePath: string;
 };
 
-type UploadBucket = 'audio' | 'covers' | 'profile' | 'profile-media' | 'submissions' | 'videos';
+type UploadBucket = 'beat-audio' | 'cover-art' | 'profile-media' | 'submissions' | 'videos';
 
 function cleanFileName(name: string) {
   const extension = name.split('.').pop()?.toLowerCase() || 'file';
@@ -58,11 +58,11 @@ async function uploadToBucket(file: File, bucket: UploadBucket): Promise<UploadR
 }
 
 export function uploadAudio(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'audio');
+  return uploadToBucket(file, 'beat-audio');
 }
 
 export function uploadCoverArt(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'covers');
+  return uploadToBucket(file, 'cover-art');
 }
 
 export function uploadProfileMedia(file: File): Promise<UploadResult> {
@@ -73,3 +73,4 @@ export function uploadProfileMedia(file: File): Promise<UploadResult> {
 export function uploadSubmissionFile(file: File): Promise<UploadResult> {
   return uploadToBucket(file, 'submissions');
 }
+
