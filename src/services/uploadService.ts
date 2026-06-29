@@ -21,9 +21,9 @@ function cleanFileName(name: string) {
   return `${base || 'upload'}-${Date.now()}.${extension}`;
 }
 
-async function uploadToBucket(file: File, bucket: UploadBucket): Promise<UploadResult> {
+async function uploadToBucket(file: File, bucket: UploadBucket, folder = ''): Promise<UploadResult> {
   const fileName = cleanFileName(file.name);
-  const storagePath = fileName;
+  const storagePath = folder ? `${folder}/${fileName}` : fileName;
 
   const { data, error } = await supabase.storage
     .from(bucket)
@@ -58,11 +58,11 @@ async function uploadToBucket(file: File, bucket: UploadBucket): Promise<UploadR
 }
 
 export function uploadAudio(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'beat-audio');
+  return uploadToBucket(file, 'beat-audio', 'audio');
 }
 
 export function uploadCoverArt(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'cover-art');
+  return uploadToBucket(file, 'cover-art', 'covers');
 }
 
 export function uploadProfileMedia(file: File): Promise<UploadResult> {
@@ -73,4 +73,3 @@ export function uploadProfileMedia(file: File): Promise<UploadResult> {
 export function uploadSubmissionFile(file: File): Promise<UploadResult> {
   return uploadToBucket(file, 'submissions');
 }
-
