@@ -2,7 +2,7 @@ import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 const SUPAMASTER_LOGO = '/assets/images/supamasterlogo.svg';
-const SUPAMASTER_URL = 'https://supamaster52.base44.app';
+const SUPAMASTER_URL = 'https://supamaster52.vercel.app';
 
 export function SupaMasterRoom() {
   const { goBack } = useApp();

@@ -72,6 +72,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       ? body.items
       : [
           {
+            order_id: body.orderId,
             beat_id: body.beatId,
             beat_name: body.beatTitle,
             beat_thumbnail: body.beatThumbnail,

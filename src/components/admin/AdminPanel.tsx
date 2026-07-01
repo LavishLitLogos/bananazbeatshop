@@ -28,6 +28,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat, BeatTape, Notification, Order, ProdBySong, Submission } from '../../types';
+import { getBeatPriceLabel, isBeatExclusive, isBeatFree, isBeatInBeatLab, isBeatInFreeDLs, isBeatVisibleToBuyer } from '../../utils/beatAccess';
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import {
   appStorage,
@@ -152,15 +153,17 @@ export function AdminPanel() {
 
     setRoomCounts({
       total: loadedBeats.length + loadedTapes.length + loadedSongs.length,
-      beatlab: loadedBeats.filter((beat) => !beat.is_free && !beat.exclusive && !beat.hidden).length,
-      freedls: loadedBeats.filter((beat) => beat.is_free && !beat.hidden).length,
+      beatlab: loadedBeats.filter((beat) => isBeatInBeatLab(beat, true)).length,
+      freedls: loadedBeats.filter((beat) => isBeatInFreeDLs(beat, true)).length,
       beattapes: loadedTapes.filter((tape) => !tape.hidden).length,
       prodby: loadedSongs.filter((song) => !song.hidden).length,
-      exclusives: loadedBeats.filter((beat) => beat.exclusive && !beat.hidden).length,
+      exclusives: loadedBeats.filter((beat) => isBeatExclusive(beat) && isBeatVisibleToBuyer(beat)).length,
+      credits: 0,
       thelab: 0,
       submission: loadedSubmissions.length,
       profile: 1,
       beatbayngr: 0,
+      supamaster: 0,
     });
 
     setLoading(false);
@@ -547,9 +550,9 @@ export function AdminPanel() {
 
     return {
       totalItems: beats.length + beatTapes.length + prodBySongs.length,
-      visibleBeats: beats.filter((beat) => !beat.hidden).length,
-      freeBeats: beats.filter((beat) => beat.is_free).length,
-      exclusives: beats.filter((beat) => beat.exclusive).length,
+      visibleBeats: beats.filter((beat) => isBeatVisibleToBuyer(beat)).length,
+      freeBeats: beats.filter((beat) => isBeatFree(beat)).length,
+      exclusives: beats.filter((beat) => isBeatExclusive(beat)).length,
       paidOrders: paidOrders.length,
       pendingOrders: pendingOrders.length,
       releasedOrders: releasedOrders.length,
@@ -880,7 +883,7 @@ function BeatsTab({
       </button>
 
       {beats.map((beat) => (
-        <AdminCard key={beat.id} title={beat.title} subtitle={`${beat.is_free ? 'Free' : formatMoney(beat.price)} · ${beat.exclusive ? 'Exclusive' : 'Beat Lab'}`} image={beat.cover_art_url}>
+        <AdminCard key={beat.id} title={beat.title} subtitle={`${getBeatPriceLabel(beat)} · ${isBeatExclusive(beat) ? 'Exclusive' : isBeatFree(beat) ? 'Free DL' : 'Beat Lab'}`} image={beat.cover_art_url}>
           <ToggleRow label="Approved" active={beat.admin_approved !== false} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { admin_approved: beat.admin_approved === false })} />
           <ToggleRow label="Hidden" active={beat.hidden} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { hidden: !beat.hidden })} />
           <ToggleRow label="Sold" active={beat.sold} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { sold: !beat.sold })} />
@@ -1972,7 +1975,7 @@ function ManualSaleModal({
       <div className="modal-box max-w-md w-full p-5 space-y-4" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div className="font-display font-900 text-xl uppercase">Manual Sale</div>
-          <button onClick={onClose} className="p-1.5 text-[#666] hover:text-white">
+          <button onClick={onClose} title="Close manual sale" aria-label="Close manual sale" className="p-1.5 text-[#666] hover:text-white">
             <X size={18} />
           </button>
         </div>
@@ -2027,7 +2030,7 @@ function DetailModalView({
       <div className="modal-box max-w-lg w-full p-5 space-y-4 max-h-[82vh] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div className="font-display font-900 text-xl uppercase">Details</div>
-          <button onClick={onClose} className="p-1.5 text-[#666] hover:text-white">
+          <button onClick={onClose} title="Close details" aria-label="Close details" className="p-1.5 text-[#666] hover:text-white">
             <X size={18} />
           </button>
         </div>

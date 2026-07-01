@@ -57,9 +57,16 @@ export function AdminGateway({ onClose, onSuccess }: AdminGatewayProps) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={(e) => { e.stopPropagation(); e.target === e.currentTarget && onClose(); }} onMouseDown={(e) => e.stopPropagation()}>
+    <div
+      className="modal-backdrop"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <div className="modal-box max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors">
+        <button onClick={onClose} title="Close admin gateway" aria-label="Close admin gateway" className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors">
           <X size={16} />
         </button>
 

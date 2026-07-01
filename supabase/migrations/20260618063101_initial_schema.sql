@@ -5,7 +5,7 @@ CREATE TABLE beats (
   title text NOT NULL,
   cover_art_url text,
   audio_file_url text,
-  price numeric(10,2) DEFAULT 30.00,
+  price numeric(10,2) DEFAULT 40.00,
   is_free boolean DEFAULT false,
   sold boolean DEFAULT false,
   release_download boolean DEFAULT false,

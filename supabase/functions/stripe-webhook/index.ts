@@ -60,6 +60,11 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  if (event.type === 'checkout.session.completed') {
+    await handleCheckoutSessionCompleted(stripeData as Stripe.Checkout.Session);
+    return;
+  }
+
   if (!('customer' in stripeData)) {
     return;
   }
@@ -122,6 +127,76 @@ async function handleEvent(event: Stripe.Event) {
       }
     }
   }
+}
+
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const {
+    id: checkout_session_id,
+    payment_intent,
+    amount_subtotal,
+    amount_total,
+    currency,
+    payment_status,
+    metadata,
+  } = session;
+
+  if (session.mode !== 'payment' || payment_status !== 'paid') {
+    return;
+  }
+
+  const orderIds = String(metadata?.order_ids || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  const { error: stripeOrderError } = await supabase.from('stripe_orders').insert({
+    checkout_session_id,
+    payment_intent_id: typeof payment_intent === 'string' ? payment_intent : payment_intent?.id,
+    customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null,
+    amount_subtotal,
+    amount_total,
+    currency,
+    payment_status,
+    status: 'completed',
+  });
+
+  if (stripeOrderError) {
+    console.error('Error inserting Stripe order:', stripeOrderError);
+  }
+
+  if (orderIds.length === 0) {
+    console.warn(`Paid Stripe checkout ${checkout_session_id} had no app order IDs.`);
+    return;
+  }
+
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      payment_received: true,
+      payment_method: 'stripe',
+      status: 'Pending Verification',
+      admin_approved: true,
+      admin_notes: `Stripe paid. Session: ${checkout_session_id}. Downloads still require release approval.`,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', orderIds);
+
+  if (updateError) {
+    console.error('Error marking app orders paid:', updateError);
+    return;
+  }
+
+  await supabase.from('notifications').insert({
+    type: 'sale',
+    title: `Stripe Payment Received: ${orderIds.length} order${orderIds.length === 1 ? '' : 's'}`,
+    body: `Stripe confirmed payment for checkout ${checkout_session_id}. Release downloads from Orders when ready.`,
+    data: {
+      order_ids: orderIds,
+      checkout_session_id,
+      amount_total,
+      currency,
+    },
+  });
 }
 
 // based on the excellent https://github.com/t3dotgg/stripe-recommendations

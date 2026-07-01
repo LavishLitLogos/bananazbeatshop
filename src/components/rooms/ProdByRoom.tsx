@@ -17,6 +17,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
+import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -422,8 +423,8 @@ function SongCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const releaseAllowed = Boolean(song.release_download) || Boolean(song.is_free) || isAdmin;
-  const priceLabel = song.is_free ? 'Free' : `$${song.price || 0}`;
+  const releaseAllowed = Boolean(song.release_download) || isBeatFree(song) || isAdmin;
+  const priceLabel = getBeatPriceLabel(song);
 
   return (
     <div
@@ -731,6 +732,8 @@ function SongUploadModal({
 
           <button
             onClick={onClose}
+            title="Close song editor"
+            aria-label="Close song editor"
             className="w-9 h-9 rounded-full bg-white/5 text-[#888] hover:text-white flex items-center justify-center"
           >
             <X size={16} />

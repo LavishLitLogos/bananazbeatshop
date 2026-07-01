@@ -23,7 +23,7 @@ export function Modal({ onClose, title, children, maxWidth = 'max-w-lg', showBac
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
             <div className="flex items-center gap-2">
               {showBack && onBack && (
-                <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-white/5 text-[#888] hover:text-white transition-colors">
+                <button onClick={onBack} title="Go back" aria-label="Go back" className="p-1.5 rounded-lg hover:bg-white/5 text-[#888] hover:text-white transition-colors">
                   <ChevronLeft size={18} />
                 </button>
               )}
@@ -31,7 +31,7 @@ export function Modal({ onClose, title, children, maxWidth = 'max-w-lg', showBac
                 <h2 className="font-display font-800 text-lg uppercase tracking-wider text-white">{title}</h2>
               )}
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors">
+            <button onClick={onClose} title="Close modal" aria-label="Close modal" className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors">
               <X size={18} />
             </button>
           </div>
@@ -39,6 +39,8 @@ export function Modal({ onClose, title, children, maxWidth = 'max-w-lg', showBac
         {!title && !showBack && (
           <button
             onClick={onClose}
+            title="Close modal"
+            aria-label="Close modal"
             className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
           >
             <X size={18} />

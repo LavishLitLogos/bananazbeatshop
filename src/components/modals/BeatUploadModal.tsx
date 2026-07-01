@@ -1,33 +1,9 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Loader, Music, Upload, X } from 'lucide-react';
-import { useAdmin } from '../../context/AdminContext';
+import { Save, X } from 'lucide-react';
+import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
-import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
-
-const DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥';
-
-type UploadKind = 'audio' | 'cover';
-type ToggleField = 'hidden' | 'admin_approved' | 'sold' | 'release_download';
-type RoomMode = 'beat' | 'free' | 'exclusive' | 'prodby';
-
-type FormState = {
-  title: string;
-  cover_art_url: string;
-  audio_file_url: string;
-  price: string;
-  room_mode: RoomMode;
-  sold: boolean;
-  release_download: boolean;
-  hidden: boolean;
-  admin_approved: boolean;
-  genre: string;
-  style: string;
-  vibe: string;
-  description: string;
-  terms: string;
-};
+import { DEFAULT_BEAT_PRICE, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
 
 interface BeatUploadModalProps {
   beat?: Beat | null;
@@ -35,634 +11,357 @@ interface BeatUploadModalProps {
   onSave: () => void;
 }
 
-const normalizeCsv = (value: string) =>
-  value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .join(', ');
+interface BeatUploadFormState {
+  title: string;
+  price: string;
+  genre: string;
+  style: string;
+  type: string;
+  vibe: string;
+  mood: string;
+  artist_suggestion: string;
+  description: string;
+  terms: string;
+  cover_art_url: string;
+  audio_file_url: string;
+  is_free: boolean;
+  exclusive: boolean;
+  bananaz_exclusive: boolean;
+  no_sharing: boolean;
+  hidden: boolean;
+  sold: boolean;
+  release_download: boolean;
+  admin_approved: boolean;
+}
 
-const getInitialRoomMode = (beat?: Beat | null): RoomMode => {
-  if (beat?.exclusive) return 'exclusive';
-  if (beat?.is_free) return 'free';
-  return 'beat';
-};
+const BEAT_UPLOAD_DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz';
 
-const getInitialForm = (beat?: Beat | null): FormState => ({
-  title: beat?.title ?? '',
-  cover_art_url: beat?.cover_art_url ?? '',
-  audio_file_url: beat?.audio_file_url ?? '',
-  price: String(beat?.price ?? 30),
-  room_mode: getInitialRoomMode(beat),
-  sold: Boolean(beat?.sold),
-  release_download: Boolean(beat?.release_download),
-  hidden: Boolean(beat?.hidden),
-  admin_approved: beat?.admin_approved ?? true,
-  genre: beat?.genre ?? '',
-  style: beat?.style ?? '',
-  vibe: beat?.vibe ?? '',
-  description: beat?.description ?? '',
-  terms: beat?.terms ?? DEFAULT_TERMS,
-});
-
-function buildBeatPayload(form: FormState) {
-  const isFree = form.room_mode === 'free';
-  const isExclusive = form.room_mode === 'exclusive';
-  const price = isFree ? 0 : Number.parseFloat(form.price || '0') || 0;
+function createBeatUploadForm(beat?: Beat | null): BeatUploadFormState {
+  const freeBeat = beat ? isBeatFree(beat) : false;
 
   return {
-    title: form.title.trim(),
-    cover_art_url: form.cover_art_url.trim() || null,
-    audio_file_url: form.audio_file_url.trim() || null,
-    price,
-    is_free: isFree,
-    sold: form.sold,
-    release_download: form.release_download,
-    exclusive: isExclusive,
-    bananaz_exclusive: isExclusive,
-    no_sharing: false,
-    hidden: form.hidden,
-    admin_approved: form.admin_approved,
-    genre: normalizeCsv(form.genre),
-    style: normalizeCsv(form.style),
-    type: '',
-    vibe: normalizeCsv(form.vibe),
-    mood: '',
-    artist_suggestion: '',
-    description: form.description.trim(),
-    terms: form.terms.trim() || DEFAULT_TERMS,
-    updated_at: new Date().toISOString(),
+    title: beat?.title || '',
+    price: String(freeBeat ? 0 : beat ? getBeatPriceValue(beat) : DEFAULT_BEAT_PRICE),
+    genre: beat?.genre || '',
+    style: beat?.style || '',
+    type: beat?.type || '',
+    vibe: beat?.vibe || '',
+    mood: beat?.mood || '',
+    artist_suggestion: beat?.artist_suggestion || '',
+    description: beat?.description || '',
+    terms: beat?.terms || BEAT_UPLOAD_DEFAULT_TERMS,
+    cover_art_url: beat?.cover_art_url || '',
+    audio_file_url: beat?.audio_file_url || '',
+    is_free: freeBeat,
+    exclusive: Boolean(beat?.exclusive),
+    bananaz_exclusive: Boolean(beat?.bananaz_exclusive),
+    no_sharing: Boolean(beat?.no_sharing),
+    hidden: Boolean(beat?.hidden),
+    sold: Boolean(beat?.sold),
+    release_download: Boolean(beat?.release_download),
+    admin_approved: beat?.admin_approved !== false,
   };
 }
 
-function buildProdByPayload(form: FormState) {
-  return {
-    title: form.title.trim(),
-    artist_name: '',
-    cover_art_url: form.cover_art_url.trim() || null,
-    audio_file_url: form.audio_file_url.trim() || null,
-    description: form.description.trim(),
-    rights_text: form.terms.trim() || DEFAULT_TERMS,
-    hidden: form.hidden,
-    admin_approved: form.admin_approved,
-    exclusive: false,
-    price: Number.parseFloat(form.price || '0') || 0,
-    is_free: false,
-    release_download: form.release_download,
-    no_sharing: false,
-    sold: form.sold,
-    updated_at: new Date().toISOString(),
-  };
+function beatUploadCleanFileName(name: string) {
+  const extension = name.split('.').pop()?.toLowerCase() || 'file';
+  const base = name
+    .replace(/\.[^/.]+$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+
+  return `${base || 'upload'}-${Date.now()}.${extension}`;
 }
 
-function ProgressBar({ value }: { value: number }) {
-  if (value <= 0) return null;
+async function beatUploadFile(file: File, bucket: 'beat-audio' | 'cover-art', folder: string) {
+  const fileName = beatUploadCleanFileName(file.name);
+  const storagePath = `${folder}/${fileName}`;
+  const { data, error } = await supabase.storage.from(bucket).upload(storagePath, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type || undefined,
+  });
+
+  if (error) {
+    throw new Error(error.message || `Upload failed in ${bucket}.`);
+  }
+
+  const savedPath = data?.path || storagePath;
+  const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(savedPath);
+  const publicUrl = publicData?.publicUrl;
+
+  if (!publicUrl) {
+    throw new Error(`Upload saved in ${bucket}, but no public URL returned.`);
+  }
+
+  return publicUrl;
+}
+
+export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps) {
+  const { addToast, refreshContent } = useApp();
+  const [form, setForm] = useState<BeatUploadFormState>(() => createBeatUploadForm(beat));
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [savingUpload, setSavingUpload] = useState(false);
+
+  const editingBeat = Boolean(beat?.id);
+
+  const updateUploadForm = <Key extends keyof BeatUploadFormState>(
+    key: Key,
+    value: BeatUploadFormState[Key]
+  ) => {
+    setForm((currentForm) => {
+      const nextForm = { ...currentForm, [key]: value };
+
+      if (key === 'is_free') {
+        const isFree = Boolean(value);
+        nextForm.price = isFree ? '0' : String(DEFAULT_BEAT_PRICE);
+        nextForm.release_download = isFree ? true : nextForm.release_download;
+      }
+
+      return nextForm;
+    });
+  };
+
+  const saveUploadBeat = async () => {
+    if (savingUpload) return;
+
+    const cleanTitle = form.title.trim();
+
+    if (!cleanTitle) {
+      addToast('Beat title is required.', 'error');
+      return;
+    }
+
+    setSavingUpload(true);
+
+    try {
+      let audioUrl = form.audio_file_url.trim();
+      let coverUrl = form.cover_art_url.trim();
+
+      if (audioFile) {
+        audioUrl = await beatUploadFile(audioFile, 'beat-audio', 'audio');
+      }
+
+      if (coverFile) {
+        coverUrl = await beatUploadFile(coverFile, 'cover-art', 'covers');
+      }
+
+      const isFree = Boolean(form.is_free);
+      const price = getBeatPriceValue({ is_free: false, price: form.price });
+      const now = new Date().toISOString();
+      const payload: Partial<Beat> = {
+        title: cleanTitle,
+        price: isFree ? 0 : price,
+        genre: form.genre.trim(),
+        style: form.style.trim(),
+        type: form.type.trim(),
+        vibe: form.vibe.trim(),
+        mood: form.mood.trim(),
+        artist_suggestion: form.artist_suggestion.trim(),
+        description: form.description.trim(),
+        terms: form.terms.trim(),
+        cover_art_url: coverUrl || undefined,
+        audio_file_url: audioUrl || undefined,
+        is_free: isFree,
+        exclusive: form.exclusive,
+        bananaz_exclusive: form.bananaz_exclusive,
+        no_sharing: form.no_sharing,
+        hidden: form.hidden,
+        sold: form.sold,
+        release_download: isFree ? true : form.release_download,
+        admin_approved: form.admin_approved,
+        updated_at: now,
+      };
+
+      if (editingBeat && beat?.id) {
+        const { error } = await supabase.from('beats').update(payload).eq('id', beat.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('beats')
+          .insert({ ...payload, created_at: now, updated_at: now });
+        if (error) throw error;
+      }
+
+      refreshContent();
+      addToast(editingBeat ? 'Beat updated.' : 'Beat uploaded.', 'success');
+      onSave();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Beat save failed.';
+      addToast(message, 'error');
+    } finally {
+      setSavingUpload(false);
+    }
+  };
 
   return (
-    <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40 border border-[#2a2a2a]">
-      <div
-        className="h-full rounded-full bg-[#f5c518] transition-all duration-200"
-        style={{ width: `${Math.min(value, 100)}%` }}
-      />
-    </div>
-  );
-}
-
-interface UploadFieldProps {
-  label: string;
-  kind: UploadKind;
-  accept: string;
-  currentUrl: string;
-  progress: number;
-  disabled: boolean;
-  onUpload: (file: File, kind: UploadKind) => void;
-  onUrlChange: (url: string) => void;
-  onClear: () => void;
-}
-
-function UploadField({
-  label,
-  kind,
-  accept,
-  currentUrl,
-  progress,
-  disabled,
-  onUpload,
-  onUrlChange,
-  onClear,
-}: UploadFieldProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const isUploading = progress > 0 && progress < 100;
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (file) onUpload(file, kind);
-  };
-
-  return (
-    <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3 w-full overflow-hidden">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-xs uppercase tracking-[0.22em] text-[#777]">{label}</label>
-
-        {currentUrl && (
+    <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="modal-box max-w-lg w-full p-5 space-y-4" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-display font-900 text-xl uppercase text-white">
+              {editingBeat ? 'Edit Beat' : 'Upload Beat'}
+            </div>
+            <div className="text-xs text-[#666] mt-1">
+              Paid beats default to $40. Free beats save as Free with no dollar amount.
+            </div>
+          </div>
           <button
             type="button"
-            onClick={onClear}
-            disabled={disabled}
-            className="text-[11px] uppercase tracking-wider text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+            aria-label="Close upload modal"
           >
-            Clear
+            <X size={18} />
           </button>
-        )}
-      </div>
-
-      <div className="mt-2 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={disabled || isUploading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#333] bg-black px-3 py-3 text-xs font-bold uppercase tracking-wider text-[#f5c518] transition hover:border-[#f5c518]/60 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isUploading ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />}
-          {isUploading ? 'Uploading' : 'Upload File'}
-        </button>
-
-        <input ref={inputRef} type="file" accept={accept} onChange={handleChange} className="hidden" />
+        </div>
 
         <input
-          value={currentUrl}
-          onChange={(event) => onUrlChange(event.target.value)}
-          disabled={disabled || isUploading}
-          placeholder="Paste URL or upload file"
-          className="input-dark w-full px-3 py-3 text-sm"
+          className="input-dark w-full px-4 py-3 text-sm"
+          value={form.title}
+          onChange={(event) => updateUploadForm('title', event.target.value)}
+          placeholder="Beat title"
         />
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3 cursor-pointer hover:border-[#f5c518]/35">
+            <div className="text-sm text-white">Audio File</div>
+            <div className="text-[11px] text-[#666] mt-1 truncate">
+              {audioFile?.name || form.audio_file_url || 'Choose MP3, WAV, or FLAC'}
+            </div>
+            <input
+              className="hidden"
+              type="file"
+              accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/flac,.mp3,.wav,.flac"
+              onChange={(event) => setAudioFile(event.target.files?.[0] || null)}
+            />
+          </label>
+          <label className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3 cursor-pointer hover:border-[#f5c518]/35">
+            <div className="text-sm text-white">Cover Art</div>
+            <div className="text-[11px] text-[#666] mt-1 truncate">
+              {coverFile?.name || form.cover_art_url || 'Choose image'}
+            </div>
+            <input
+              className="hidden"
+              type="file"
+              accept="image/*"
+              onChange={(event) => setCoverFile(event.target.files?.[0] || null)}
+            />
+          </label>
+        </div>
+
+        <input
+          className="input-dark w-full px-4 py-3 text-sm"
+          value={form.audio_file_url}
+          onChange={(event) => updateUploadForm('audio_file_url', event.target.value)}
+          placeholder="Audio file URL"
+        />
+
+        <input
+          className="input-dark w-full px-4 py-3 text-sm"
+          value={form.cover_art_url}
+          onChange={(event) => updateUploadForm('cover_art_url', event.target.value)}
+          placeholder="Cover art URL"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            className="input-dark w-full px-4 py-3 text-sm"
+            value={form.is_free ? '0' : form.price}
+            disabled={form.is_free}
+            type="number"
+            min="0"
+            step="0.01"
+            onChange={(event) => updateUploadForm('price', event.target.value)}
+            placeholder="Price (default $40)"
+          />
+          <button
+            type="button"
+            onClick={() => updateUploadForm('is_free', !form.is_free)}
+            className={`rounded-xl border px-4 py-3 text-sm font-bold uppercase ${
+              form.is_free
+                ? 'bg-green-900/25 text-green-300 border-green-700/40'
+                : 'bg-[#111] text-[#888] border-[#222]'
+            }`}
+          >
+            {form.is_free ? 'Free Beat' : 'Paid Beat'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.genre} onChange={(event) => updateUploadForm('genre', event.target.value)} placeholder="Genre tags" />
+          <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.style} onChange={(event) => updateUploadForm('style', event.target.value)} placeholder="Style tags" />
+          <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.type} onChange={(event) => updateUploadForm('type', event.target.value)} placeholder="Type tags" />
+          <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.vibe} onChange={(event) => updateUploadForm('vibe', event.target.value)} placeholder="Vibe tags" />
+        </div>
+
+        <input
+          className="input-dark w-full px-4 py-3 text-sm"
+          value={form.mood}
+          onChange={(event) => updateUploadForm('mood', event.target.value)}
+          placeholder="Mood tags"
+        />
+
+        <input
+          className="input-dark w-full px-4 py-3 text-sm"
+          value={form.artist_suggestion}
+          onChange={(event) => updateUploadForm('artist_suggestion', event.target.value)}
+          placeholder="Artist suggestion"
+        />
+
+        <textarea
+          className="input-dark w-full px-4 py-3 text-sm min-h-[90px] resize-y"
+          value={form.description}
+          onChange={(event) => updateUploadForm('description', event.target.value)}
+          placeholder="Description"
+        />
+
+        <textarea
+          className="input-dark w-full px-4 py-3 text-sm min-h-[70px] resize-y"
+          value={form.terms}
+          onChange={(event) => updateUploadForm('terms', event.target.value)}
+          placeholder="Terms"
+        />
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <BeatUploadFlag label="Exclusive" active={form.exclusive} onClick={() => updateUploadForm('exclusive', !form.exclusive)} />
+          <BeatUploadFlag label="Bananaz Exclusive" active={form.bananaz_exclusive} onClick={() => updateUploadForm('bananaz_exclusive', !form.bananaz_exclusive)} />
+          <BeatUploadFlag label="No Sharing" active={form.no_sharing} onClick={() => updateUploadForm('no_sharing', !form.no_sharing)} />
+          <BeatUploadFlag label="Hidden" active={form.hidden} onClick={() => updateUploadForm('hidden', !form.hidden)} />
+          <BeatUploadFlag label="Sold" active={form.sold} onClick={() => updateUploadForm('sold', !form.sold)} />
+          <BeatUploadFlag label="Release DL" active={form.release_download} onClick={() => updateUploadForm('release_download', !form.release_download)} />
+          <BeatUploadFlag label="Approved" active={form.admin_approved} onClick={() => updateUploadForm('admin_approved', !form.admin_approved)} />
+        </div>
+
+        <button
+          type="button"
+          onClick={saveUploadBeat}
+          disabled={savingUpload}
+          className="btn-gold w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          <Save size={15} />
+          {savingUpload ? 'Saving...' : editingBeat ? 'Save Beat' : 'Upload Beat'}
+        </button>
       </div>
-
-      <ProgressBar value={progress} />
-
-      {currentUrl && kind === 'cover' && (
-        <img
-          src={currentUrl}
-          alt="Artwork preview"
-          className="mt-3 aspect-square w-full max-w-[180px] rounded-xl border border-[#2b2b2b] object-contain"
-        />
-      )}
-
-      {currentUrl && kind === 'audio' && (
-        <audio src={currentUrl} controls className="mt-3 w-full" preload="metadata" />
-      )}
     </div>
   );
 }
 
-interface ToggleRowProps {
-  label: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: () => void;
-}
-
-function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRowProps) {
+function BeatUploadFlag({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onChange}
-      disabled={disabled}
-      className="flex w-full items-center justify-between gap-4 border-b border-[#1f1f1f] py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <span className="min-w-0">
-        <span className="block text-sm font-bold text-white">{label}</span>
-        <span className="block text-xs leading-relaxed text-[#777]">{description}</span>
-      </span>
-
-      <span className={`relative h-6 w-11 flex-shrink-0 rounded-full transition ${checked ? 'bg-[#f5c518]' : 'bg-[#2b2b2b]'}`}>
-        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${checked ? 'left-6' : 'left-1'}`} />
-      </span>
-    </button>
-  );
-}
-
-function RoomModeButton({
-  active,
-  label,
-  onClick,
-  disabled,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
       onClick={onClick}
-      className={`rounded-xl border px-3 py-3 text-center text-xs font-bold uppercase transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`px-3 py-2 rounded-xl text-xs border transition-all ${
         active
-          ? 'border-[#f5c518] bg-[#f5c518]/10 text-[#f5c518]'
-          : 'border-[#2b2b2b] bg-black/30 text-[#777] hover:border-[#f5c518]/40 hover:text-white'
+          ? 'bg-[#f5c518]/10 text-[#f5c518] border-[#f5c518]/25'
+          : 'bg-[#111] text-[#666] border-[#222]'
       }`}
     >
       {label}
     </button>
-  );
-}
-
-export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps) {
-  const { isAdmin } = useAdmin();
-  const { addToast, refreshContent } = useApp();
-
-  const [form, setForm] = useState<FormState>(() => getInitialForm(beat));
-  const [saving, setSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<UploadKind, number>>({ audio: 0, cover: 0 });
-
-  const isEdit = Boolean(beat?.id);
-  const modalTitle = useMemo(() => (isEdit ? 'Edit Beat' : 'Upload Beat'), [isEdit]);
-  const locked = saving || uploadProgress.audio > 0 || uploadProgress.cover > 0;
-
-  useEffect(() => {
-    setForm(getInitialForm(beat));
-  }, [beat]);
-
-  const updateField = <Key extends keyof FormState>(field: Key, value: FormState[Key]) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
-
-  const setRoomMode = (mode: RoomMode) => {
-    setForm((current) => ({
-      ...current,
-      room_mode: mode,
-      price: mode === 'free' ? '0' : current.price === '0' ? '30' : current.price,
-      release_download: mode === 'free' ? true : current.release_download,
-    }));
-  };
-
-  const toggleField = (field: ToggleField) => {
-    setForm((current) => ({ ...current, [field]: !current[field] }));
-  };
-
-  const handleUpload = async (file: File, kind: UploadKind) => {
-    setUploadProgress((current) => ({ ...current, [kind]: 10 }));
-
-    try {
-      const result = kind === 'audio' ? await uploadAudio(file) : await uploadCoverArt(file);
-
-      if (kind === 'audio') {
-        updateField('audio_file_url', result.url);
-      } else {
-        updateField('cover_art_url', result.url);
-      }
-
-      setUploadProgress((current) => ({ ...current, [kind]: 100 }));
-      addToast(`${kind === 'audio' ? 'Audio' : 'Artwork'} uploaded.`, 'success');
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Upload failed.', 'error');
-    } finally {
-      window.setTimeout(() => {
-        setUploadProgress((current) => ({ ...current, [kind]: 0 }));
-      }, 450);
-    }
-  };
-
-  const validate = () => {
-    if (!isAdmin) return 'Admin access is required.';
-    if (!form.title.trim()) return 'Beat title is required.';
-    if (!form.audio_file_url.trim()) return 'Audio upload or audio URL is required.';
-    if (!form.cover_art_url.trim()) return 'Cover upload or cover URL is required.';
-    if (form.room_mode !== 'free' && Number.parseFloat(form.price || '0') <= 0) {
-      return 'Paid uploads need a price above $0.';
-    }
-    return null;
-  };
-
-  const handleSave = async () => {
-    const validationError = validate();
-
-    if (validationError) {
-      addToast(validationError, 'error');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      if (form.room_mode === 'prodby' && !isEdit) {
-        const { error } = await supabase.from('prod_by_songs').insert(buildProdByPayload(form));
-
-        if (error) throw error;
-
-        addToast('Produced By song uploaded.', 'success');
-      } else {
-        const payload = buildBeatPayload(form);
-
-        const { error } = isEdit
-          ? await supabase.from('beats').update(payload).eq('id', beat?.id)
-          : await supabase.from('beats').insert({
-              ...payload,
-              created_at: new Date().toISOString(),
-            });
-
-        if (error) throw error;
-
-        addToast(isEdit ? 'Beat updated.' : 'Beat uploaded.', 'success');
-      }
-
-      refreshContent();
-      onSave();
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Beat save failed.', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!beat?.id || !window.confirm('Delete this beat?')) return;
-
-    setSaving(true);
-
-    try {
-      const { error } = await supabase.from('beats').delete().eq('id', beat.id);
-
-      if (error) throw error;
-
-      addToast('Beat deleted.', 'info');
-      refreshContent();
-      onSave();
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Delete failed.', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!isAdmin) {
-    return (
-      <div className="modal-backdrop overflow-hidden" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-box w-[calc(100vw-24px)] max-w-md p-6 text-center overflow-x-hidden">
-          <X className="mx-auto mb-3 text-red-300" size={28} />
-          <h2 className="font-display text-xl font-black uppercase text-white">Admin Only</h2>
-          <p className="mt-2 text-sm text-[#999]">Beat uploads and edits are locked to the owner panel.</p>
-          <button type="button" onClick={onClose} className="btn-gold mt-5 rounded-xl px-5 py-3 text-sm">
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="modal-backdrop overflow-hidden"
-      onClick={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
-      onTouchMove={(event) => event.stopPropagation()}
-    >
-      <div
-        className="modal-box w-[calc(100vw-24px)] max-w-xl max-h-[88vh] overflow-y-auto overflow-x-hidden"
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#222] bg-[#0d0d0d]/95 backdrop-blur-xl px-4 py-4">
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.25em] text-[#f5c518]">Admin Beat Lab</p>
-            <h2 className="font-display text-xl font-black uppercase tracking-wider text-white">{modalTitle}</h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={locked}
-            className="flex-shrink-0 rounded-xl p-2 text-[#777] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Close upload modal"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-4 p-4 w-full overflow-x-hidden">
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Beat Title *</label>
-            <input
-              value={form.title}
-              onChange={(event) => updateField('title', event.target.value)}
-              disabled={locked}
-              placeholder="Name the beat"
-              className="input-dark mt-1 w-full px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4">
-            <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-white">Image Preview</h3>
-
-            <div className="aspect-square w-full overflow-hidden rounded-2xl border border-[#2c2c2c] bg-black">
-              {form.cover_art_url ? (
-                <img src={form.cover_art_url} alt="Beat artwork preview" className="h-full w-full object-contain" />
-              ) : (
-                <div className="flex h-full items-center justify-center px-4 text-center text-xs uppercase tracking-wider text-[#555]">
-                  Upload cover art
-                </div>
-              )}
-            </div>
-          </div>
-
-          <UploadField
-            label="Audio Upload"
-            kind="audio"
-            accept="audio/*,.mp3,.wav,.flac,.aiff,.aif,.m4a,.ogg"
-            currentUrl={form.audio_file_url}
-            progress={uploadProgress.audio}
-            disabled={saving}
-            onUpload={handleUpload}
-            onUrlChange={(url) => updateField('audio_file_url', url)}
-            onClear={() => updateField('audio_file_url', '')}
-          />
-
-          <UploadField
-            label="Cover Upload"
-            kind="cover"
-            accept="image/*,.jpg,.jpeg,.png,.webp,.gif"
-            currentUrl={form.cover_art_url}
-            progress={uploadProgress.cover}
-            disabled={saving}
-            onUpload={handleUpload}
-            onUrlChange={(url) => updateField('cover_art_url', url)}
-            onClear={() => updateField('cover_art_url', '')}
-          />
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Price</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.room_mode === 'free' ? '0' : form.price}
-              onChange={(event) => updateField('price', event.target.value)}
-              disabled={locked || form.room_mode === 'free'}
-              className="input-dark mt-1 w-full px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-[#242424] bg-[#101010] p-3">
-            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white">
-              <Music size={16} className="text-[#f5c518]" />
-              Room
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <RoomModeButton active={form.room_mode === 'beat'} label="Beat" onClick={() => setRoomMode('beat')} disabled={locked} />
-              <RoomModeButton active={form.room_mode === 'free'} label="Free" onClick={() => setRoomMode('free')} disabled={locked} />
-              <RoomModeButton active={form.room_mode === 'exclusive'} label="Exclusive" onClick={() => setRoomMode('exclusive')} disabled={locked} />
-              <RoomModeButton active={form.room_mode === 'prodby'} label="Produced By" onClick={() => setRoomMode('prodby')} disabled={locked || isEdit} />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Genre</label>
-            <input
-              value={form.genre}
-              onChange={(event) => updateField('genre', event.target.value)}
-              disabled={locked}
-              placeholder="Hip Hop, R&B"
-              className="input-dark mt-1 w-full px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Style</label>
-            <input
-              value={form.style}
-              onChange={(event) => updateField('style', event.target.value)}
-              disabled={locked}
-              placeholder="Boom Bap, Trap Soul"
-              className="input-dark mt-1 w-full px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Vibe</label>
-            <input
-              value={form.vibe}
-              onChange={(event) => updateField('vibe', event.target.value)}
-              disabled={locked}
-              placeholder="Dark, Motivational"
-              className="input-dark mt-1 w-full px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(event) => updateField('description', event.target.value)}
-              disabled={locked}
-              rows={4}
-              placeholder="Describe the beat for buyers."
-              className="input-dark mt-1 w-full resize-none px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-[0.22em] text-[#777]">Terms</label>
-            <textarea
-              value={form.terms}
-              onChange={(event) => updateField('terms', event.target.value)}
-              disabled={locked}
-              rows={3}
-              className="input-dark mt-1 w-full resize-none px-3 py-3 text-sm"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-[#242424] bg-[#101010] p-4">
-            <div className="mb-1 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-              <CheckCircle2 size={16} className="text-[#f5c518]" />
-              Status Toggles
-            </div>
-
-            <ToggleRow
-              label="Free"
-              description="Send this to Free DLs and force price to $0."
-              checked={form.room_mode === 'free'}
-              disabled={locked}
-              onChange={() => setRoomMode(form.room_mode === 'free' ? 'beat' : 'free')}
-            />
-
-            <ToggleRow
-              label="Exclusive"
-              description="Send this to Exclusives."
-              checked={form.room_mode === 'exclusive'}
-              disabled={locked}
-              onChange={() => setRoomMode(form.room_mode === 'exclusive' ? 'beat' : 'exclusive')}
-            />
-
-            <ToggleRow
-              label="Produced By"
-              description="Send this to Produced By."
-              checked={form.room_mode === 'prodby'}
-              disabled={locked || isEdit}
-              onChange={() => setRoomMode(form.room_mode === 'prodby' ? 'beat' : 'prodby')}
-            />
-
-            <ToggleRow
-              label="Approved"
-              description="Visible as approved content."
-              checked={form.admin_approved}
-              disabled={locked}
-              onChange={() => toggleField('admin_approved')}
-            />
-
-            <ToggleRow
-              label="Hidden"
-              description="Hide from buyer-facing rooms."
-              checked={form.hidden}
-              disabled={locked}
-              onChange={() => toggleField('hidden')}
-            />
-
-            <ToggleRow
-              label="Sold"
-              description="Mark as no longer available."
-              checked={form.sold}
-              disabled={locked}
-              onChange={() => toggleField('sold')}
-            />
-
-            <ToggleRow
-              label="Release Download"
-              description="Admin unlock flag for download access."
-              checked={form.release_download}
-              disabled={locked}
-              onChange={() => toggleField('release_download')}
-            />
-          </div>
-
-          <div className="sticky bottom-0 z-20 -mx-4 mt-5 flex flex-col gap-3 border-t border-[#222] bg-[#0b0b0b]/95 px-4 pt-4 pb-1 backdrop-blur-xl">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={locked}
-              className="btn-gold rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : isEdit ? 'Save Beat Changes' : form.room_mode === 'prodby' ? 'Upload Produced By' : 'Upload Beat'}
-            </button>
-
-            {isEdit && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={locked}
-                className="rounded-xl border border-red-500/30 bg-red-950/30 px-5 py-3 text-sm font-bold uppercase tracking-wider text-red-300 transition hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

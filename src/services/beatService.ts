@@ -1,5 +1,15 @@
 import { supabase } from '../lib/supabase';
 import type { Beat, BeatTape, BeatTapeTrack, ProdBySong, Room } from '../types';
+import {
+  canDownloadBeat as canAccessBeatDownload,
+  canBuyBeat,
+  DEFAULT_BEAT_PRICE,
+  isBeatExclusive,
+  isBeatFree,
+  isBeatInBeatLab,
+  isBeatInFreeDLs,
+  isBeatVisibleToBuyer,
+} from '../utils/beatAccess';
 
 export type BeatRoomFilter = {
   style?: string;
@@ -86,7 +96,6 @@ export async function getAllBeats(filters?: BeatRoomFilter) {
   let query = supabase
     .from('beats')
     .select('*')
-    .eq('hidden', false)
     .order('created_at', { ascending: false });
 
   query = applyBeatFilters(query, filters);
@@ -95,15 +104,13 @@ export async function getAllBeats(filters?: BeatRoomFilter) {
 
   if (error) throw error;
 
-  return (data || []) as Beat[];
+  return ((data || []) as Beat[]).filter((beat) => isBeatVisibleToBuyer(beat));
 }
 
 export async function getPaidBeats(filters?: BeatRoomFilter) {
   let query = supabase
     .from('beats')
     .select('*')
-    .eq('hidden', false)
-    .eq('is_free', false)
     .order('created_at', { ascending: false });
 
   query = applyBeatFilters(query, filters);
@@ -112,15 +119,13 @@ export async function getPaidBeats(filters?: BeatRoomFilter) {
 
   if (error) throw error;
 
-  return (data || []) as Beat[];
+  return ((data || []) as Beat[]).filter((beat) => isBeatInBeatLab(beat) && !isBeatFree(beat));
 }
 
 export async function getFreeBeats(filters?: BeatRoomFilter) {
   let query = supabase
     .from('beats')
     .select('*')
-    .eq('hidden', false)
-    .eq('is_free', true)
     .order('created_at', { ascending: false });
 
   query = applyBeatFilters(query, filters);
@@ -129,15 +134,13 @@ export async function getFreeBeats(filters?: BeatRoomFilter) {
 
   if (error) throw error;
 
-  return (data || []) as Beat[];
+  return ((data || []) as Beat[]).filter((beat) => isBeatInFreeDLs(beat));
 }
 
 export async function getExclusiveBeats(filters?: BeatRoomFilter) {
   let query = supabase
     .from('beats')
     .select('*')
-    .eq('hidden', false)
-    .eq('exclusive', true)
     .order('created_at', { ascending: false });
 
   query = applyBeatFilters(query, filters);
@@ -146,7 +149,7 @@ export async function getExclusiveBeats(filters?: BeatRoomFilter) {
 
   if (error) throw error;
 
-  return (data || []) as Beat[];
+  return ((data || []) as Beat[]).filter((beat) => isBeatExclusive(beat));
 }
 
 export async function getBeatById(id: string) {
@@ -166,7 +169,7 @@ export async function createBeat(payload: BeatPayload) {
     title: payload.title,
     cover_art_url: payload.cover_art_url || null,
     audio_file_url: payload.audio_file_url || null,
-    price: payload.price ?? 30,
+    price: payload.price ?? DEFAULT_BEAT_PRICE,
     is_free: payload.is_free ?? false,
     sold: payload.sold ?? false,
     release_download: payload.release_download ?? false,
@@ -229,7 +232,7 @@ export async function toggleBeatHidden(id: string, hidden: boolean) {
   return updateBeat(id, { hidden });
 }
 
-export async function toggleBeatFree(id: string, is_free: boolean, price = 30) {
+export async function toggleBeatFree(id: string, is_free: boolean, price = DEFAULT_BEAT_PRICE) {
   return updateBeat(id, {
     is_free,
     price: is_free ? 0 : price,
@@ -413,13 +416,17 @@ export async function getRoomCounts() {
 }
 
 export function getRoomForBeat(beat: Beat): Room {
-  if (beat.is_free) return 'freedls';
-  if (beat.exclusive) return 'exclusives';
+  if (isBeatFree(beat)) return 'freedls';
+  if (isBeatExclusive(beat)) return 'exclusives';
   return 'beatlab';
 }
 
 export function canDownloadBeat(beat: Beat) {
-  return beat.is_free || beat.release_download;
+  return canAccessBeatDownload(beat);
+}
+
+export function canPurchaseBeat(beat: Beat) {
+  return canBuyBeat(beat);
 }
 
 export function canShareBeat(beat: Beat) {

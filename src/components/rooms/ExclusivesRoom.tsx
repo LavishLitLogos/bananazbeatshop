@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
+import { getBeatPriceLabel } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -90,7 +91,11 @@ export function ExclusivesRoom() {
     }
 
     if (audio.currentBeat?.id === song.id) {
-      audio.isPlaying ? audio.pause() : audio.resume();
+      if (audio.isPlaying) {
+        audio.pause();
+      } else {
+        audio.resume();
+      }
       return;
     }
 
@@ -246,6 +251,10 @@ export function ExclusivesRoom() {
                       {song.artist_name || 'Artist TBA'}
                     </div>
 
+                    <div className="text-[10px] text-white/80 truncate mt-0.5">
+                      {getBeatPriceLabel(song)}
+                    </div>
+
                     <div className="flex items-center gap-1 mt-1">
                       <span
                         onClick={(event) => {
@@ -295,6 +304,9 @@ export function ExclusivesRoom() {
                 </div>
                 <div className="text-sm text-[#f5c518] mt-1">
                   {selectedSong.artist_name || 'Artist TBA'}
+                </div>
+                <div className="text-xs text-white/75 mt-1">
+                  {getBeatPriceLabel(selectedSong)}
                 </div>
               </div>
 

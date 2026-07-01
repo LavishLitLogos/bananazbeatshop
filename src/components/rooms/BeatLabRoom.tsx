@@ -10,7 +10,6 @@ import {
   Play,
   Plus,
   Search,
-  Share2,
   ShoppingBag,
   SlidersHorizontal,
   Trash2,
@@ -24,6 +23,7 @@ import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BuyModal } from '../modals/BuyModal';
 import { ShareButton } from '../ui/ShareButton';
+import { canBuyBeat, canDownloadBeat, getBeatPriceLabel, isBeatFree, isBeatInBeatLab, triggerBeatDownload } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PLAY_ICON = '/assets/icons/play-icon.png';
@@ -57,10 +57,6 @@ function splitTags(value?: string | null) {
 
 function normalizeTag(value: string) {
   return value.trim().toLowerCase();
-}
-
-function getBeatUrl(beat: Beat) {
-  return `${window.location.origin}${window.location.pathname}#beat-${beat.id}`;
 }
 
 function getCover(beat: Beat) {
@@ -137,19 +133,10 @@ export function BeatLabRoom() {
   const fetchBeats = useCallback(async () => {
     setLoading(true);
 
-    let query = supabase
+    const query = supabase
       .from('beats')
       .select('*')
-      .eq('is_free', false)
-      .eq('exclusive', false)
-      .eq('bananaz_exclusive', false)
       .order('created_at', { ascending: false });
-
-    if (!isAdmin) {
-      query = query
-        .eq('admin_approved', true)
-        .eq('hidden', false);
-    }
 
     const { data, error } = await query;
 
@@ -159,7 +146,7 @@ export function BeatLabRoom() {
       return;
     }
 
-    const loadedBeats = (data || []) as Beat[];
+    const loadedBeats = ((data || []) as Beat[]).filter((beat) => isBeatInBeatLab(beat, isAdmin));
 
     setBeats(loadedBeats);
     setAllTags(buildTagMap(loadedBeats));
@@ -259,40 +246,15 @@ export function BeatLabRoom() {
   };
 
   const handleBuy = (beat: Beat) => {
+    if (!canBuyBeat(beat)) return;
     setSelectedBeat(beat);
     setShowBuy(true);
   };
 
   const handleAddToBox = (beat: Beat) => {
+    if (!canBuyBeat(beat)) return;
     addToCart(beat);
     addToast(`${beat.title} added to Beat Box.`, 'success');
-  };
-
-  const handleShare = async (beat: Beat) => {
-    const url = getBeatUrl(beat);
-
-    const shareData = {
-      title: beat.title,
-      text: `Check out "${beat.title}" on ThisBeatIzBananaz.`,
-      url,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
-
-      await navigator.clipboard.writeText(url);
-      addToast('Beat link copied.', 'success');
-    } catch {
-      try {
-        await navigator.clipboard.writeText(url);
-        addToast('Beat link copied.', 'success');
-      } catch {
-        addToast('Share failed.', 'error');
-      }
-    }
   };
 
   const handlePopOut = (beat: Beat) => {
@@ -306,22 +268,15 @@ export function BeatLabRoom() {
       return;
     }
 
-    if (!beat.release_download && !beat.is_free && !isAdmin) {
+    if (!beat.release_download && !isBeatFree(beat) && !isAdmin) {
       addToast('Download locked until release is approved.', 'info');
       return;
     }
 
-    const confirmed = window.confirm(
-      "I wanna hear the cookup when it's ready fam! Let me know when you drop it, and I'll help promote it. We All We Got!"
-    );
-
-    if (!confirmed) return;
-
-    const anchor = document.createElement('a');
-    anchor.href = beat.audio_file_url;
-    anchor.download = `${beat.title || 'thisbeatizbananaz-beat'}.mp3`;
-    anchor.rel = 'noopener';
-    anchor.click();
+    if (!triggerBeatDownload(beat, isAdmin)) {
+      addToast('Download locked until release is approved.', 'info');
+      return;
+    }
 
     addToast('Download started.', 'success');
   };
@@ -510,7 +465,7 @@ export function BeatLabRoom() {
         )}
       </div>
 
-      <div className="px-2.5 py-4 grid grid-cols-4 gap-2.5 pb-32 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+      <div className="px-3 py-4 grid grid-cols-2 gap-3 pb-32 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {loading ? (
           Array.from({ length: 16 }).map((_, index) => (
             <div
@@ -519,7 +474,7 @@ export function BeatLabRoom() {
             />
           ))
         ) : filteredBeats.length === 0 ? (
-          <div className="col-span-4 md:col-span-5 lg:col-span-6 text-center py-16 text-[#444]">
+          <div className="col-span-2 sm:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 text-center py-16 text-[#444]">
             <img
               src={PLAY_ICON}
               alt=""
@@ -558,7 +513,6 @@ export function BeatLabRoom() {
               onBuy={() => handleBuy(beat)}
               onAddToBox={() => handleAddToBox(beat)}
               onFreeDL={() => handleFreeDL(beat)}
-              onShare={() => handleShare(beat)}
               onPopOut={() => handlePopOut(beat)}
               isAdmin={isAdmin}
               adminEditMode={adminEditMode}
@@ -620,7 +574,6 @@ function BeatCard({
   onBuy,
   onAddToBox,
   onFreeDL,
-  onShare,
   onPopOut,
   isAdmin,
   adminEditMode,
@@ -637,7 +590,6 @@ function BeatCard({
   onBuy: () => void;
   onAddToBox: () => void;
   onFreeDL: () => void;
-  onShare: () => void;
   onPopOut: () => void;
   isAdmin: boolean;
   adminEditMode: boolean;
@@ -646,7 +598,7 @@ function BeatCard({
   onDelete: () => void;
   onClick: () => void;
 }) {
-  const downloadEnabled = beat.is_free || beat.release_download || isAdmin;
+  const downloadEnabled = canDownloadBeat(beat, isAdmin);
   const primaryTag =
     splitTags(beat.genre)[0] ||
     splitTags(beat.style)[0] ||
@@ -688,7 +640,7 @@ function BeatCard({
             </span>
           )}
 
-          {beat.release_download && (
+          {downloadEnabled && (
             <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-green-500 text-black uppercase tracking-wide">
               DL
             </span>
@@ -778,29 +730,29 @@ function BeatCard({
       </div>
 
       <div className="p-2 bg-[#0f0f0f]">
-        <div className="font-display font-900 text-[10px] text-white truncate leading-tight uppercase">
+        <div className="font-display font-900 text-[13px] text-white truncate leading-tight uppercase tracking-[0.02em]">
           {beat.title}
         </div>
 
-        <div className="text-[8px] text-[#777] mt-1 line-clamp-2 min-h-[22px]">
+        <div className="text-[10px] text-[#909090] mt-1.5 line-clamp-2 min-h-[30px] leading-relaxed">
           {getPlayText(beat)}
         </div>
 
-        <div className="flex flex-wrap gap-1 mt-1 min-h-[17px]">
+        <div className="flex flex-wrap gap-1.5 mt-2 min-h-[22px]">
           {secondaryTags.map((tag) => (
-            <span key={tag} className="tag-chip text-[8px] px-1 py-0">
+            <span key={tag} className="tag-chip text-[9px] px-2 py-0.5">
               {tag}
             </span>
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="grid grid-cols-2 gap-2 mt-2">
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onPlay();
+              onQueue();
             }}
-            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
+            className="h-10 px-2 rounded-xl bg-[#171717] border border-white/5 text-[#9a9a9a] hover:text-[#f5c518] hover:border-[#f5c518]/20 transition-all flex items-center justify-center"
             title="Play / Pause"
           >
             {isCurrentlyPlaying ? <Pause size={12} /> : <Play size={12} />}
@@ -809,35 +761,23 @@ function BeatCard({
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onShare();
-            }}
-            disabled={beat.no_sharing}
-            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-            title="Share"
-          >
-            <Share2 size={12} />
-          </button>
-
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
               onPopOut();
             }}
-            className="py-2 px-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
+            className="h-10 px-2 rounded-xl bg-[#171717] border border-white/5 text-[#9a9a9a] hover:text-[#f5c518] hover:border-[#f5c518]/20 transition-all flex items-center justify-center"
             title="Pop out"
           >
             <ExternalLink size={12} />
           </button>
         </div>
 
-        <div className="flex items-center justify-between mt-2 gap-1">
+        <div className="flex items-center justify-between mt-2.5 gap-1.5">
           {downloadEnabled ? (
             <button
               onClick={(event) => {
                 event.stopPropagation();
                 onFreeDL();
               }}
-              className="p-1.5 rounded-lg bg-green-900/40 border border-green-700/30 text-green-400 hover:bg-green-900/60 transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-xl bg-green-900/30 border border-green-700/30 text-green-400 hover:bg-green-900/50 transition-all flex items-center justify-center"
               title="Download"
             >
               <Download size={12} />
@@ -848,7 +788,7 @@ function BeatCard({
                 event.stopPropagation();
                 onFreeDL();
               }}
-              className="p-1.5 rounded-lg bg-[#1a1a1a] border border-[#222] text-[#555] hover:text-[#888] transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-xl bg-[#171717] border border-[#222] text-[#555] hover:text-[#888] transition-all flex items-center justify-center"
               title="Download locked"
             >
               <Lock size={12} />
@@ -856,8 +796,12 @@ function BeatCard({
           )}
 
           {beat.sold ? (
-            <div className="flex-1 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#222] text-[#444] text-[9px] font-bold text-center">
+            <div className="flex-1 h-9 rounded-xl bg-[#171717] border border-[#222] text-[#444] text-[10px] font-bold text-center flex items-center justify-center uppercase tracking-[0.12em]">
               Sold
+            </div>
+          ) : isBeatFree(beat) ? (
+            <div className="flex-1 h-9 rounded-xl bg-green-900/20 border border-green-700/30 text-green-400 text-[10px] font-bold text-center flex items-center justify-center uppercase tracking-[0.08em]">
+              {getBeatPriceLabel(beat)}
             </div>
           ) : (
             <>
@@ -866,9 +810,9 @@ function BeatCard({
                   event.stopPropagation();
                   onBuy();
                 }}
-                className="flex-1 py-1.5 rounded-lg bg-[#f5c518] text-black text-[9px] font-display font-900 hover:bg-[#ffdb4a] transition-all"
+                className="flex-1 h-9 rounded-xl bg-[#f5c518] text-black text-[11px] font-display font-900 hover:bg-[#ffdb4a] transition-all tracking-[0.02em]"
               >
-                ${beat.price || 30}
+                {getBeatPriceLabel(beat)}
               </button>
 
               <button
@@ -876,7 +820,7 @@ function BeatCard({
                   event.stopPropagation();
                   onAddToBox();
                 }}
-                className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all"
+                className="w-9 h-9 rounded-xl bg-[#171717] border border-white/5 text-[#888] hover:text-[#f5c518] hover:border-[#f5c518]/20 transition-all flex items-center justify-center"
                 title="Add to Beat Box"
               >
                 <ShoppingBag size={12} />

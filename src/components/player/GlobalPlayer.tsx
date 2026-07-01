@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react';
 import {
   Pause,
   Play,
-  Share2,
+  ShoppingBag,
   SkipBack,
   SkipForward,
   Square,
-  Volume2,
-  VolumeX,
   X,
 } from 'lucide-react';
 import { useApp, useAudio } from '../../context/AppContext';
+import type { Beat } from '../../types';
+import { canBuyBeat, getBeatPriceLabel } from '../../utils/beatAccess';
+import { BeatDetailModal } from '../modals/BeatDetailModal';
+import { BuyModal } from '../modals/BuyModal';
 
 const FALLBACK_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -39,13 +41,16 @@ function getArtistLine(item: any) {
   );
 }
 
+function isBeatItem(item: any): item is Beat {
+  return Boolean(item?.id && 'is_free' in item && 'price' in item);
+}
+
 export function GlobalPlayer() {
   const {
     currentBeat,
     isPlaying,
     currentTime,
     duration,
-    volume,
     previewOnly,
     previewSeconds,
     queue,
@@ -53,17 +58,18 @@ export function GlobalPlayer() {
     toggle,
     stop,
     seek,
-    setVolume,
     next,
     prev,
     hasNext,
     hasPrev,
   } = useAudio();
 
-  const { addToast } = useApp();
+  const { addToast, addToCart, setCartOpen } = useApp();
 
   const [expanded, setExpanded] = useState(false);
-  const [showVolume, setShowVolume] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [showBuy, setShowBuy] = useState(false);
 
   const progress = useMemo(() => {
     if (!duration || duration <= 0) return 0;
@@ -83,6 +89,8 @@ export function GlobalPlayer() {
   const title = currentBeat.title || 'Untitled';
   const cover = getCover(currentBeat);
   const artistLine = getArtistLine(currentBeat);
+  const beatItem = isBeatItem(currentBeat) ? currentBeat : null;
+  const canPurchaseBeat = Boolean(beatItem && canBuyBeat(beatItem));
   const queueLabel =
     queue.length > 1 && queueIndex >= 0
       ? `${queueIndex + 1} / ${queue.length}`
@@ -94,46 +102,81 @@ export function GlobalPlayer() {
     if (!duration) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
-    const percentage = Math.min(
-      1,
-      Math.max(0, (event.clientX - rect.left) / rect.width)
-    );
-
+    const percentage = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
     const seekLimit = previewOnly ? Math.min(duration, previewSeconds) : duration;
+
     seek(percentage * seekLimit);
   };
 
-  const handleShare = async () => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}#play-${currentBeat.id}`;
+  const closePlayer = () => {
+    setExpanded(false);
+    setShowDetail(false);
+    setShowBuy(false);
+    stop();
+  };
 
-    const shareData = {
-      title,
-      text: `${title} — ${artistLine}`,
-      url: shareUrl,
-    };
+  const openBeatDetail = () => {
+    if (!beatItem) return;
+    setExpanded(false);
+    setShowDetail(true);
+  };
 
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
+  const handleAddToBeatBox = (event: React.MouseEvent) => {
+    event.stopPropagation();
 
-      await navigator.clipboard.writeText(shareUrl);
-      addToast('Player link copied.', 'success');
-    } catch {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        addToast('Player link copied.', 'success');
-      } catch {
-        addToast('Share failed.', 'error');
-      }
+    if (!beatItem) {
+      addToast('Only Beat Lab beats can be added to Beat Box.', 'info');
+      return;
+    }
+
+    if (!canPurchaseBeat) {
+      addToast(beatItem.sold ? 'This beat is sold.' : 'Free beats do not need Beat Box.', 'info');
+      return;
+    }
+
+    addToCart(beatItem);
+    setCartOpen(true);
+    addToast(`${beatItem.title} added to Beat Box.`, 'success');
+  };
+
+  const handleBuy = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!canPurchaseBeat) {
+      addToast('This beat is not available for purchase.', 'info');
+      return;
+    }
+
+    setExpanded(false);
+    setShowDetail(false);
+    setShowBuy(true);
+  };
+
+  const handleExpandedTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    setTouchStartY(event.touches[0]?.clientY ?? null);
+  };
+
+  const handleExpandedTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY === null) return;
+
+    const endY = event.changedTouches[0]?.clientY ?? touchStartY;
+    const swipeDistance = endY - touchStartY;
+
+    setTouchStartY(null);
+
+    if (swipeDistance > 80) {
+      setExpanded(false);
     }
   };
 
   return (
     <div className="fixed left-0 right-0 bottom-0 z-[500] pb-safe pointer-events-none">
       {expanded && (
-        <div className="pointer-events-auto fixed inset-0 z-[499] bg-black/86 backdrop-blur-xl flex items-center justify-center px-5 pb-28">
+        <div
+          className="pointer-events-auto fixed inset-0 z-[499] bg-black/86 backdrop-blur-xl flex items-center justify-center px-5 pb-28"
+          onTouchStart={handleExpandedTouchStart}
+          onTouchEnd={handleExpandedTouchEnd}
+        >
           <div className="w-full max-w-md rounded-[2rem] bg-[#0d0d0d] border border-[#f5c518]/20 shadow-[0_0_50px_rgba(245,197,24,0.12)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
               <div className="text-[10px] font-display font-900 uppercase tracking-[0.25em] text-[#f5c518]">
@@ -150,13 +193,18 @@ export function GlobalPlayer() {
             </div>
 
             <div className="p-5">
-              <div className="aspect-square rounded-[1.7rem] overflow-hidden bg-black border border-white/10 shadow-2xl">
+              <button
+                onClick={openBeatDetail}
+                disabled={!beatItem}
+                className="block w-full aspect-square rounded-[1.7rem] overflow-hidden bg-black border border-white/10 shadow-2xl disabled:cursor-default"
+                aria-label="Open beat detail"
+              >
                 <img
                   src={cover}
                   alt={title}
                   className="w-full h-full object-cover"
                 />
-              </div>
+              </button>
 
               <div className="mt-5">
                 <div className="font-display text-2xl font-900 text-white uppercase tracking-wide leading-tight">
@@ -224,7 +272,7 @@ export function GlobalPlayer() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mt-5">
+              <div className={`grid gap-2 mt-5 ${canPurchaseBeat ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <button
                   onClick={stop}
                   className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
@@ -233,37 +281,26 @@ export function GlobalPlayer() {
                   Stop
                 </button>
 
-                <button
-                  onClick={handleShare}
-                  className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
-                >
-                  <Share2 size={14} />
-                  Share
-                </button>
+                {canPurchaseBeat && (
+                  <>
+                    <button
+                      onClick={handleBuy}
+                      className="h-11 rounded-2xl bg-[#f5c518] text-black hover:bg-[#ffdf4d] transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
+                    >
+                      <ShoppingBag size={14} />
+                      Buy
+                    </button>
 
-                <button
-                  onClick={() => setShowVolume((value) => !value)}
-                  className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
-                >
-                  {volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  Vol
-                </button>
+                    <button
+                      onClick={handleAddToBeatBox}
+                      className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
+                    >
+                      <ShoppingBag size={14} />
+                      Box
+                    </button>
+                  </>
+                )}
               </div>
-
-              {showVolume && (
-                <div className="mt-4 rounded-2xl bg-black/45 border border-white/10 px-4 py-3">
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={volume}
-                    onChange={(event) => setVolume(Number(event.target.value))}
-                    className="w-full accent-[#f5c518]"
-                    aria-label="Volume"
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -272,7 +309,7 @@ export function GlobalPlayer() {
       <div className="pointer-events-auto player-bar border-t border-[#f5c518]/15 bg-[#080808]/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(0,0,0,0.55)]">
         <div
           className="h-[3px] bg-[#171717] cursor-pointer"
-          onClick={handleSeek}
+          onClick={openBeatDetail}
           role="presentation"
         >
           <div
@@ -283,18 +320,18 @@ export function GlobalPlayer() {
 
         <div className="flex items-center gap-3 px-3 py-2.5">
           <button
-            onClick={() => setExpanded(true)}
-            className="w-12 h-12 rounded-xl overflow-hidden bg-black border border-[#222] flex-shrink-0 shadow-lg"
-            aria-label="Open expanded player"
+            onClick={openBeatDetail}
+            className="w-12 h-12 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+            aria-label="Open beat detail"
           >
             <img src={cover} alt={title} className="w-full h-full object-cover" />
           </button>
 
           <button
-            onClick={() => setExpanded(true)}
+            onClick={openBeatDetail}
             className="flex-1 min-w-0 text-left"
           >
-            <div className="font-display font-900 text-sm text-white uppercase truncate leading-tight">
+            <div className="font-display font-900 text-[15px] text-white uppercase truncate leading-tight">
               {title}
             </div>
 
@@ -305,8 +342,10 @@ export function GlobalPlayer() {
             </div>
 
             <div className="text-[10px] text-[#666] mt-0.5">
-              {formatTime(currentTime)} /{' '}
-              {displayDuration ? formatTime(displayDuration) : '--:--'}
+              {formatTime(currentTime)} / {displayDuration ? formatTime(displayDuration) : '--:--'}
+              {beatItem && (
+                <span className="ml-2 text-[#f5c518]">{getBeatPriceLabel(beatItem)}</span>
+              )}
             </div>
           </button>
 
@@ -325,16 +364,7 @@ export function GlobalPlayer() {
             </div>
           )}
 
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={prev}
-              disabled={!hasPrev}
-              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-              aria-label="Previous"
-            >
-              <SkipBack size={13} />
-            </button>
-
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={toggle}
               className="w-10 h-10 rounded-full bg-[#f5c518] text-black flex items-center justify-center hover:bg-[#ffdf4d] transition-all shadow-[0_0_22px_rgba(245,197,24,0.28)]"
@@ -347,57 +377,52 @@ export function GlobalPlayer() {
               )}
             </button>
 
-            <button
-              onClick={next}
-              disabled={!hasNext}
-              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-              aria-label="Next"
-            >
-              <SkipForward size={13} />
-            </button>
-
-            <button
-              onClick={stop}
-              className="hidden sm:flex w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all items-center justify-center"
-              aria-label="Stop"
-            >
-              <Square size={13} fill="currentColor" />
-            </button>
-
-            <div className="relative hidden sm:block">
+            {canPurchaseBeat && (
               <button
-                onClick={() => setShowVolume((value) => !value)}
-                className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
-                aria-label="Volume"
+                onClick={handleBuy}
+                className="h-8 px-2.5 rounded-full bg-[#171717] text-[#f5c518] hover:text-black hover:bg-[#f5c518] transition-all flex items-center justify-center text-[10px] font-bold uppercase tracking-widest"
+                aria-label="Buy current beat"
               >
-                {volume === 0 ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                Buy
               </button>
-
-              {showVolume && !expanded && (
-                <div className="absolute bottom-11 right-0 bg-[#111] border border-[#2a2a2a] rounded-xl p-3 shadow-xl">
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={volume}
-                    onChange={(event) => setVolume(Number(event.target.value))}
-                    className="w-24 accent-[#f5c518]"
-                    aria-label="Volume"
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             <button
-              onClick={handleShare}
-              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
-              aria-label="Share current audio"
+              onClick={handleAddToBeatBox}
+              disabled={!canPurchaseBeat}
+              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              aria-label="Add current beat to Beat Box"
             >
-              <Share2 size={13} />
+              <ShoppingBag size={13} />
+            </button>
+
+            <button
+              onClick={closePlayer}
+              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
+              aria-label="Close player"
+            >
+              <X size={13} />
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="pointer-events-auto">
+        {showDetail && beatItem && (
+          <BeatDetailModal
+            beat={beatItem}
+            allBeats={queue.filter(isBeatItem)}
+            onClose={() => setShowDetail(false)}
+            onBuy={() => {
+              setShowDetail(false);
+              setShowBuy(true);
+            }}
+          />
+        )}
+
+        {showBuy && beatItem && (
+          <BuyModal beat={beatItem} onClose={() => setShowBuy(false)} />
+        )}
       </div>
     </div>
   );

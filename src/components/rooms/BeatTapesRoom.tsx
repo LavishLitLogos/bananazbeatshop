@@ -930,6 +930,8 @@ function TapeUploadModal({
 
           <button
             onClick={onClose}
+            title="Close beat tape editor"
+            aria-label="Close beat tape editor"
             className="w-9 h-9 rounded-full bg-white/5 text-[#888] hover:text-white"
           >
             <X size={16} />

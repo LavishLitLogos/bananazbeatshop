@@ -3,6 +3,7 @@ import { CreditCard, Lock, Mail, ShoppingBag, Trash2, Wallet, X } from 'lucide-r
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat } from '../../types';
+import { canBuyBeat, getBeatPriceLabel, getBeatPriceValue } from '../../utils/beatAccess';
 
 type CheckoutStep = 'cart' | 'checkout' | 'confirm';
 type PaymentMethod = 'stripe' | 'cashapp' | 'paypal';
@@ -36,7 +37,7 @@ const paymentCopy: Record<PaymentMethod, { label: string; destination: string; h
 
 const money = (value: number) => `$${Number.isFinite(value) ? value.toFixed(2) : '0.00'}`;
 
-const getBeatPrice = (beat: Beat) => (beat.is_free ? 0 : Number(beat.price || 0));
+const getBeatPrice = (beat: Beat) => getBeatPriceValue(beat);
 
 const buildOrderPayload = (beat: Beat, form: CheckoutForm) => ({
   beat_id: beat.id,
@@ -76,6 +77,16 @@ export function BeatBoxCart() {
       return false;
     }
 
+    if (cart.some((beat) => !canBuyBeat(beat))) {
+      addToast('Beat Box contains a free, sold, or invalid beat. Remove it before checkout.', 'error');
+      return false;
+    }
+
+    if (total <= 0) {
+      addToast('Beat Box total must be above $0 for checkout.', 'error');
+      return false;
+    }
+
     if (!form.name.trim()) {
       addToast('Enter your name before checkout.', 'error');
       return false;
@@ -89,31 +100,35 @@ export function BeatBoxCart() {
     return true;
   };
 
-  const insertManualOrders = async () => {
+  const insertOrders = async (notify: boolean) => {
     const orderPayloads = cart.map((beat) => buildOrderPayload(beat, form));
-    const { data, error } = await supabase.from('orders').insert(orderPayloads).select('id');
+    const { data, error } = await supabase.from('orders').insert(orderPayloads).select('id, beat_id');
 
     if (error || !data || data.length !== orderPayloads.length) {
       throw new Error(error?.message || 'Order creation failed.');
     }
 
-    await supabase.from('notifications').insert({
-      type: 'sale',
-      title: `New Beat Box Order: ${cart.length} beat${cart.length === 1 ? '' : 's'}`,
-      body: `${form.name.trim()} submitted a ${selectedPayment.label} order for ${money(total)}. Once payment is processed, your download will be available.`,
-      data: {
-        order_ids: data.map((order) => order.id),
-        buyer_email: form.email.trim().toLowerCase(),
-        payment_method: form.method,
-        total,
-      },
-    });
+    if (notify) {
+      await supabase.from('notifications').insert({
+        type: 'sale',
+        title: `New Beat Box Order: ${cart.length} beat${cart.length === 1 ? '' : 's'}`,
+        body: `${form.name.trim()} submitted a ${selectedPayment.label} order for ${money(total)}. Once payment is processed, your download will be available.`,
+        data: {
+          order_ids: data.map((order) => order.id),
+          buyer_email: form.email.trim().toLowerCase(),
+          payment_method: form.method,
+          total,
+        },
+      });
+    }
 
-    return data.length;
+    return data;
   };
 
   const startStripeCheckout = async () => {
+    const orders = await insertOrders(false);
     const checkoutItems = cart.map((beat) => ({
+      order_id: orders.find((order) => order.beat_id === beat.id)?.id,
       beat_id: beat.id,
       beat_name: beat.title,
       beat_thumbnail: beat.cover_art_url || null,
@@ -154,8 +169,8 @@ export function BeatBoxCart() {
         return;
       }
 
-      const placedOrders = await insertManualOrders();
-      setOrderCount(placedOrders);
+      const placedOrders = await insertOrders(true);
+      setOrderCount(placedOrders.length);
       clearCart();
       setStep('confirm');
       addToast('Order request submitted. Downloads stay locked until release.', 'success');
@@ -180,7 +195,7 @@ export function BeatBoxCart() {
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="modal-box max-w-md w-full" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-2">
             <ShoppingBag size={18} className="text-[#f5c518]" />
             <h2 className="font-display font-800 text-lg uppercase tracking-wider text-white">Beat Box</h2>
@@ -193,7 +208,7 @@ export function BeatBoxCart() {
           <button
             type="button"
             onClick={closeCart}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+            className="w-9 h-9 rounded-full hover:bg-white/5 bg-white/[0.03] text-[#666] hover:text-white transition-colors flex items-center justify-center"
             aria-label="Close cart"
           >
             <X size={18} />
@@ -213,7 +228,7 @@ export function BeatBoxCart() {
                 <div className="space-y-3">
                   <div className="max-h-[42vh] overflow-y-auto pr-1 space-y-3">
                     {cart.map((beat) => (
-                      <div key={beat.id} className="flex items-center gap-3 p-3 bg-[#111] rounded-xl border border-[#1e1e1e]">
+                      <div key={beat.id} className="flex items-center gap-3 p-3.5 bg-[#111] rounded-2xl border border-white/5 shadow-[0_14px_28px_rgba(0,0,0,0.2)]">
                         {beat.cover_art_url ? (
                           <img src={beat.cover_art_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                         ) : (
@@ -222,7 +237,7 @@ export function BeatBoxCart() {
                         <div className="flex-1 min-w-0">
                           <div className="font-display font-700 text-sm text-white truncate">{beat.title}</div>
                           <div className="text-[#f5c518] text-sm font-bold">
-                            {beat.is_free ? 'Free' : money(getBeatPrice(beat))}
+                            {getBeatPriceLabel(beat)}
                           </div>
                         </div>
                         <button
@@ -245,7 +260,7 @@ export function BeatBoxCart() {
                   <button
                     type="button"
                     onClick={() => setStep('checkout')}
-                    className="btn-gold w-full py-3 rounded-xl text-sm mt-2 flex items-center justify-center gap-2"
+                    className="btn-gold w-full py-3.5 rounded-2xl text-sm mt-2 flex items-center justify-center gap-2"
                   >
                     <CreditCard size={16} />
                     Checkout
@@ -261,7 +276,7 @@ export function BeatBoxCart() {
                 <label className="block">
                   <span className="sr-only">Your name</span>
                   <input
-                    className="input-dark w-full px-4 py-3 text-sm"
+                    className="input-dark w-full px-4 py-3.5 text-sm"
                     placeholder="Your name"
                     value={form.name}
                     onChange={(event) => updateForm('name', event.target.value)}
@@ -270,7 +285,7 @@ export function BeatBoxCart() {
                 <label className="block">
                   <span className="sr-only">Your email</span>
                   <input
-                    className="input-dark w-full px-4 py-3 text-sm"
+                    className="input-dark w-full px-4 py-3.5 text-sm"
                     placeholder="Your email"
                     type="email"
                     value={form.email}
@@ -290,7 +305,7 @@ export function BeatBoxCart() {
                       key={method}
                       type="button"
                       onClick={() => updateForm('method', method)}
-                      className={`w-full p-3 rounded-xl border text-left transition-all ${
+                      className={`w-full p-3.5 rounded-2xl border text-left transition-all ${
                         selected
                           ? 'border-[#f5c518] bg-[#f5c518]/5 text-white'
                           : 'border-[#1e1e1e] bg-[#0f0f0f] text-[#888] hover:border-[#333]'
@@ -309,7 +324,7 @@ export function BeatBoxCart() {
                 })}
               </div>
 
-              <div className="p-3 bg-[#0d0d0d] rounded-xl border border-[#1e1e1e] text-xs text-[#888] leading-relaxed flex gap-2">
+              <div className="p-3.5 bg-[#0d0d0d] rounded-2xl border border-[#1e1e1e] text-xs text-[#888] leading-relaxed flex gap-2">
                 <Lock size={15} className="text-[#f5c518] flex-shrink-0 mt-0.5" />
                 <span>
                   Once payment is processed, your download will be available.

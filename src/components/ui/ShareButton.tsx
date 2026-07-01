@@ -16,9 +16,11 @@ export function ShareButton({ title = 'ThisBeatIzBananaz Beat Shop', text = 'Che
     if (navigator.share) {
       try {
         await navigator.share({ title, text, url: shareUrl });
-      } catch {}
+      } catch {
+        await navigator.clipboard.writeText(shareUrl).catch(() => undefined);
+      }
     } else {
-      await navigator.clipboard.writeText(shareUrl).catch(() => {});
+      await navigator.clipboard.writeText(shareUrl).catch(() => undefined);
     }
   };
 
@@ -28,6 +30,7 @@ export function ShareButton({ title = 'ThisBeatIzBananaz Beat Shop', text = 'Che
         onClick={handleShare}
         className={`p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#666] hover:text-[#f5c518] transition-all ${className}`}
         title="Share"
+        aria-label="Share"
       >
         <Share2 size={13} />
       </button>
@@ -39,6 +42,7 @@ export function ShareButton({ title = 'ThisBeatIzBananaz Beat Shop', text = 'Che
       onClick={handleShare}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#888] hover:text-[#f5c518] transition-all text-sm ${className}`}
       title="Share"
+      aria-label="Share"
     >
       <Share2 size={14} />
     </button>

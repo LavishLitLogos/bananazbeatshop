@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { useApp, useAudio } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat } from '../../types';
+import { canBuyBeat, canDownloadBeat, DEFAULT_BEAT_PRICE, getBeatPriceLabel, getBeatPriceValue, isBeatFree, triggerBeatDownload } from '../../utils/beatAccess';
 import { ShareButton } from '../ui/ShareButton';
 
 interface BeatDetailModalProps {
@@ -43,11 +44,6 @@ interface AdminForm {
   admin_approved: boolean;
 }
 
-function formatPrice(value: number | string | undefined) {
-  const numberValue = Number(value || 0);
-  return numberValue % 1 === 0 ? String(numberValue) : numberValue.toFixed(2);
-}
-
 function splitTags(value?: string) {
   return (value || '')
     .split(',')
@@ -58,7 +54,7 @@ function splitTags(value?: string) {
 function createAdminForm(beat: Beat): AdminForm {
   return {
     title: beat.title || '',
-    price: String(beat.price || 0),
+    price: String(isBeatFree(beat) ? 0 : getBeatPriceValue(beat)),
     genre: beat.genre || '',
     style: beat.style || '',
     type: beat.type || '',
@@ -67,7 +63,7 @@ function createAdminForm(beat: Beat): AdminForm {
     description: beat.description || '',
     terms: beat.terms || '',
     hidden: Boolean(beat.hidden),
-    is_free: Boolean(beat.is_free),
+    is_free: isBeatFree(beat),
     exclusive: Boolean(beat.exclusive),
     sold: Boolean(beat.sold),
     release_download: Boolean(beat.release_download),
@@ -75,15 +71,8 @@ function createAdminForm(beat: Beat): AdminForm {
   };
 }
 
-function canDownloadBeat(beat: Beat, isAdmin: boolean) {
-  if (!beat.audio_file_url) return false;
-  if (isAdmin) return true;
-  if (beat.is_free) return true;
-  return Boolean(beat.release_download);
-}
-
 export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDetailModalProps) {
-  const { addToast, isAdmin, adminEditMode, refreshContent } = useApp();
+  const { addToast, addToCart, isAdmin, adminEditMode, refreshContent, setCartOpen } = useApp();
   const audio = useAudio();
   const [adminForm, setAdminForm] = useState<AdminForm>(() => createAdminForm(beat));
   const [saving, setSaving] = useState(false);
@@ -95,6 +84,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
   const isCurrentBeat = audio.currentBeat?.id === beat.id;
   const isCurrentPlaying = isCurrentBeat && audio.isPlaying;
   const downloadUnlocked = canDownloadBeat(beat, isAdmin);
+  const purchaseAvailable = canBuyBeat(beat);
   const showAdminControls = isAdmin && adminEditMode;
 
   const tagGroups = [
@@ -119,7 +109,11 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     }
 
     if (isCurrentBeat) {
-      audio.isPlaying ? audio.pause() : audio.resume();
+      if (audio.isPlaying) {
+        audio.pause();
+      } else {
+        audio.resume();
+      }
       return;
     }
 
@@ -170,15 +164,23 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = beat.audio_file_url;
-    link.download = `${beat.title || 'thisbeatizbanaz-beat'}.mp3`;
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    if (!triggerBeatDownload(beat, isAdmin)) {
+      addToast('Download is locked until admin releases it.', 'info');
+      return;
+    }
 
     addToast('Download started.', 'success');
+  };
+
+  const handleAddToBeatBox = () => {
+    if (!purchaseAvailable) {
+      addToast(isBeatFree(beat) ? 'Free beats do not need Beat Box.' : 'This beat is not available for Beat Box.', 'info');
+      return;
+    }
+
+    addToCart(beat);
+    setCartOpen(true);
+    addToast(`${beat.title} added to Beat Box.`, 'success');
   };
 
   const saveAdminChanges = async () => {
@@ -195,7 +197,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
     const updates: Partial<Beat> = {
       title: cleanTitle,
-      price: Number(adminForm.price || 0),
+      price: adminForm.is_free ? 0 : Number(adminForm.price || DEFAULT_BEAT_PRICE),
       genre: adminForm.genre.trim(),
       style: adminForm.style.trim(),
       type: adminForm.type.trim(),
@@ -207,7 +209,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
       is_free: adminForm.is_free,
       exclusive: adminForm.exclusive,
       sold: adminForm.sold,
-      release_download: adminForm.release_download,
+      release_download: adminForm.is_free ? true : adminForm.release_download,
       admin_approved: adminForm.admin_approved,
       updated_at: new Date().toISOString(),
     };
@@ -277,27 +279,28 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
   return (
     <div
-      className="modal-backdrop overflow-hidden"
-      onClick={(event) => event.stopPropagation()}
+      className="modal-backdrop beat-detail-backdrop"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
       onMouseDown={(event) => event.stopPropagation()}
-      onTouchMove={(event) => event.stopPropagation()}
     >
       <div
-        className="modal-box w-[calc(100vw-24px)] max-w-md max-h-[88vh] overflow-y-auto overflow-x-hidden"
+        className="modal-box beat-detail-modal w-[calc(100vw-24px)] max-w-md overflow-y-auto overflow-x-hidden"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
-        onTouchMove={(event) => event.stopPropagation()}
       >
         <div className="relative w-full overflow-hidden">
+          {/* X CLOSE BUTTON — always visible, always functional */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 p-1.5 rounded-lg hover:bg-white/10 bg-black/40 text-[#aaa] hover:text-white transition-colors"
+            className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full hover:bg-white/10 bg-black/70 border border-white/10 text-white transition-colors flex items-center justify-center"
             aria-label="Close beat detail"
           >
             <X size={18} />
           </button>
 
-          <div className="aspect-square bg-[#111] rounded-t-xl overflow-hidden">
+          <div className="aspect-square bg-[#111] rounded-t-[22px] overflow-hidden">
             {beat.cover_art_url ? (
               <img src={beat.cover_art_url} alt={beat.title} className="w-full h-full object-contain" />
             ) : (
@@ -330,7 +333,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
           )}
         </div>
 
-        <div className="p-5 space-y-4 w-full max-w-full overflow-x-hidden">
+        <div className="p-5 sm:p-6 space-y-5 w-full max-w-full overflow-x-hidden">
           <div className="flex justify-between items-start gap-3 min-w-0">
             <div className="flex-1 min-w-0">
               <h2 className="font-display font-900 text-xl uppercase tracking-wider text-white leading-tight break-words">
@@ -338,7 +341,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               </h2>
 
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {beat.is_free && (
+                {isBeatFree(beat) && (
                   <span className="px-2 py-0.5 rounded text-[10px] uppercase bg-green-900/25 text-green-400 border border-green-800/30">
                     Free DL
                   </span>
@@ -357,9 +360,10 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               </div>
             </div>
 
+            {/* PRICE DISPLAY — FREE beats never show a dollar amount, ever */}
             <div className="text-right flex-shrink-0">
-              <div className="font-display text-2xl font-900 text-[#f5c518]">
-                {beat.is_free ? 'FREE' : `$${formatPrice(beat.price)}`}
+              <div className={`font-display text-[2rem] font-900 leading-none ${isBeatFree(beat) ? 'text-green-400' : 'text-[#f5c518]'}`}>
+                {getBeatPriceLabel(beat)}
               </div>
             </div>
           </div>
@@ -367,14 +371,14 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
           {tagGroups.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {tagGroups.map((tag) => (
-                <span key={tag} className="px-2 py-1 rounded-lg bg-[#1a1a1a] text-[#888] text-xs break-words">
+                <span key={tag} className="px-2.5 py-1 rounded-xl bg-[#171717] border border-white/5 text-[#9a9a9a] text-xs break-words">
                   {tag}
                 </span>
               ))}
             </div>
           )}
 
-          {beat.description && <p className="text-sm text-[#888] leading-relaxed break-words">{beat.description}</p>}
+          {beat.description && <p className="text-[15px] text-[#9a9a9a] leading-relaxed break-words">{beat.description}</p>}
 
           {beat.terms && (
             <div className="text-xs text-[#666] border-t border-[#1a1a1a] pt-3 leading-relaxed break-words">
@@ -382,11 +386,11 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 rounded-[1.4rem] border border-white/5 bg-[#101010] p-3">
             <button
               onClick={handlePrev}
               disabled={!hasPrev}
-              className="p-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-11 h-11 rounded-2xl bg-[#171717] text-[#888] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               aria-label="Previous beat"
             >
               <SkipBack size={18} />
@@ -394,7 +398,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
             <button
               onClick={handlePlay}
-              className="w-12 h-12 rounded-full bg-[#f5c518] flex items-center justify-center text-black hover:bg-[#f5c518]/90 transition-colors"
+              className="w-14 h-14 rounded-full bg-[#f5c518] flex items-center justify-center text-black hover:bg-[#f5c518]/90 transition-colors shadow-[0_0_30px_rgba(245,197,24,0.22)]"
               aria-label={isCurrentPlaying ? 'Pause beat' : 'Play beat'}
             >
               {isCurrentPlaying ? <Pause size={22} /> : <Play size={22} className="ml-0.5" />}
@@ -403,22 +407,32 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             <button
               onClick={handleNext}
               disabled={!hasNext}
-              className="p-2 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-11 h-11 rounded-2xl bg-[#171717] text-[#888] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               aria-label="Next beat"
             >
               <SkipForward size={18} />
             </button>
           </div>
 
-          <div className="flex gap-2 pt-2 flex-wrap">
-            {!beat.is_free && !beat.sold && (
+          <div className="flex gap-2.5 pt-1 flex-wrap">
+            {purchaseAvailable && (
               <button onClick={onBuy} className="btn-gold flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2">
                 <ShoppingBag size={16} />
-                Buy / Request
+                Buy
               </button>
             )}
 
-            {(beat.is_free || beat.release_download || isAdmin) && (
+            {purchaseAvailable && (
+              <button
+                onClick={handleAddToBeatBox}
+                className="btn-dark flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2"
+              >
+                <ShoppingBag size={16} />
+                Beat Box
+              </button>
+            )}
+
+            {downloadUnlocked && (
               <button
                 onClick={handleDownload}
                 className="btn-gold flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2"
@@ -428,7 +442,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               </button>
             )}
 
-            {!beat.is_free && !beat.release_download && !isAdmin && (
+            {!downloadUnlocked && (
               <button
                 onClick={handleDownload}
                 className="flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#111] border border-[#222] text-[#666]"
@@ -442,10 +456,11 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
               title={beat.title}
               text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
               url={window.location.href}
-              className="px-4 py-3 rounded-xl bg-[#1a1a1a] text-[#888] hover:text-white flex-shrink-0"
+              className="px-4 py-3 rounded-xl bg-[#171717] border border-white/5 text-[#888] hover:text-white flex-shrink-0"
             />
           </div>
 
+          {/* ADMIN CONTROLS — always accessible when admin is logged in */}
           {isAdmin && (
             <div className="border-t border-[#1a1a1a] pt-4 space-y-3 w-full max-w-full overflow-x-hidden">
               <div className="grid grid-cols-2 gap-2">
@@ -479,12 +494,13 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
                   <input
                     className="input-dark w-full px-4 py-3 text-sm"
-                    value={adminForm.price}
+                    value={adminForm.is_free ? '0' : adminForm.price}
+                    disabled={adminForm.is_free}
                     onChange={(event) => updateAdminForm('price', event.target.value)}
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="Price"
+                    placeholder="Price (default $40)"
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

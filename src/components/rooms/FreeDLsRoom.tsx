@@ -7,6 +7,7 @@ import type { Beat } from '../../types';
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { ShareButton } from '../ui/ShareButton';
+import { isBeatInFreeDLs, triggerBeatDownload } from '../../utils/beatAccess';
 
 export function FreeDLsRoom() {
   const { goBack, isAdmin, addToast } = useApp();
@@ -22,14 +23,12 @@ export function FreeDLsRoom() {
   const fetchBeats = useCallback(async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
+    const query = supabase
       .from('beats')
       .select('*')
-      .eq('is_free', true)
-      .eq('exclusive', false)
-      .eq('admin_approved', true)
-      .eq('hidden', false)
       .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) {
       addToast('Free DLs failed to load.', 'error');
@@ -37,9 +36,9 @@ export function FreeDLsRoom() {
       return;
     }
 
-    setBeats((data || []) as Beat[]);
+    setBeats(((data || []) as Beat[]).filter((beat) => isBeatInFreeDLs(beat, isAdmin)));
     setLoading(false);
-  }, [addToast]);
+  }, [addToast, isAdmin]);
 
   useEffect(() => {
     fetchBeats();
@@ -72,11 +71,12 @@ export function FreeDLsRoom() {
       return;
     }
 
-    const anchor = document.createElement('a');
-    anchor.href = pendingBeat.audio_file_url;
-    anchor.download = `${pendingBeat.title || 'thisbeatizbananaz-free-dl'}.mp3`;
-    anchor.rel = 'noopener';
-    anchor.click();
+    if (!triggerBeatDownload(pendingBeat, isAdmin)) {
+      addToast('Download is locked until admin releases it.', 'info');
+      setShowFreeDLMsg(false);
+      setPendingBeat(null);
+      return;
+    }
 
     setShowFreeDLMsg(false);
     setPendingBeat(null);
@@ -143,7 +143,7 @@ export function FreeDLsRoom() {
           beats.map((beat) => (
             <div
               key={beat.id}
-              className="beat-card cursor-pointer"
+              className="beat-card cursor-pointer rounded-2xl"
               onClick={() => {
                 setSelectedBeat(beat);
                 setShowDetail(true);
@@ -170,29 +170,20 @@ export function FreeDLsRoom() {
                   </span>
                 </div>
 
-                {!beat.no_sharing && (
-                  <div className="absolute top-2 right-2">
-                    <ShareButton
-                      small
-                      title={beat.title}
-                      text={`Free beat: "${beat.title}" from ThisBeatIzBananaz!`}
-                    />
-                  </div>
-                )}
               </div>
 
-              <div className="p-2.5">
-                <div className="font-display font-700 text-sm text-white truncate">
+              <div className="p-3">
+                <div className="font-display font-800 text-[15px] text-white truncate leading-tight">
                   {beat.title}
                 </div>
 
-                <div className="flex gap-1.5 mt-2">
+                <div className="flex gap-1.5 mt-2.5">
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
                       handlePlay(beat);
                     }}
-                    className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-[#f5c518] transition-all"
+                    className="w-9 h-9 rounded-xl bg-[#171717] border border-white/5 text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
                     aria-label={currentBeat?.id === beat.id && isPlaying ? 'Pause beat' : 'Play beat'}
                   >
                     {currentBeat?.id === beat.id && isPlaying ? (
@@ -212,7 +203,7 @@ export function FreeDLsRoom() {
                       event.stopPropagation();
                       handleFreeDL(beat);
                     }}
-                    className="flex-1 py-1.5 rounded-lg bg-green-900/40 border border-green-700/30 text-green-400 text-xs font-bold flex items-center justify-center gap-1 hover:bg-green-900/60 transition-all"
+                    className="flex-1 h-9 rounded-xl bg-green-900/35 border border-green-700/30 text-green-400 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-green-900/60 transition-all"
                   >
                     <img
                       src="/assets/icons/grab-icon.png"

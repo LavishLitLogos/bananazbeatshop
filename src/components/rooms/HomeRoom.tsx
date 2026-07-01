@@ -4,7 +4,8 @@ import { useApp } from '../../context/AppContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
-import type { Room } from '../../types';
+import type { Beat, ProdBySong, Room } from '../../types';
+import { getBeatPriceLabel, isBeatFree, isBeatVisibleToBuyer } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const FLAME_ICON = '/assets/images/glofirereact.png';
@@ -17,12 +18,10 @@ const ROOMS: { id: Room; label: string; icon: string }[] = [
   { id: 'freedls', label: 'Free DLs', icon: '/assets/icons/grab-icon.png' },
   { id: 'beattapes', label: 'Beat Tapes', icon: '/assets/icons/beattapes.png' },
   { id: 'prodby', label: 'Produced By', icon: '/assets/icons/skip-icon.png' },
-
   { id: 'credits', label: 'Credits', icon: '/assets/icons/play-icon.png' },
   { id: 'submission', label: 'Submission', icon: '/assets/images/notis.png' },
   { id: 'beatbayngr', label: 'BeatBaynGr', icon: '/assets/images/glofirereact.png' },
   { id: 'supamaster', label: 'SupaMaster', icon: '/assets/images/glofirereact.png' },
-
   { id: 'thelab', label: 'The Lab', icon: '/assets/images/glofirereact.png' },
   { id: 'exclusives', label: 'Exclusives', icon: '/assets/icons/play-icon.png' },
   { id: 'profile', label: 'Profile', icon: MAIN_LOGO },
@@ -47,37 +46,34 @@ export function HomeRoom() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [iosPWA, setIosPWA] = useState(false);
   const [totalBeats, setTotalBeats] = useState(0);
-  const [latestDrops, setLatestDrops] = useState<any[]>([]);
+  const [latestDrops, setLatestDrops] = useState<Beat[]>([]);
+  const [exclusiveSongs, setExclusiveSongs] = useState<ProdBySong[]>([]);
   const [adminCode, setAdminCode] = useState('');
   const [hasExclusives, setHasExclusives] = useState(false);
   const [showWelcomeAdmin, setShowWelcomeAdmin] = useState(false);
   const pwaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchHomeData = useCallback(async () => {
-    const { count } = await supabase
-      .from('beats')
-      .select('*', { count: 'exact', head: true })
-      .eq('hidden', false);
-
-    setTotalBeats(count || 0);
-
-    const { data } = await supabase
+    const { data: beatData } = await supabase
       .from('beats')
       .select('*')
+      .order('created_at', { ascending: false });
+
+    const visibleBeats = ((beatData || []) as Beat[]).filter((beat) => isBeatVisibleToBuyer(beat));
+    setTotalBeats(visibleBeats.length);
+    setLatestDrops(visibleBeats.slice(0, 8));
+
+    const { data: exclusiveData } = await supabase
+      .from('prod_by_songs')
+      .select('*')
       .eq('hidden', false)
-      .order('created_at', { ascending: false })
-      .limit(4);
-
-    setLatestDrops(data || []);
-
-    const { count: excCount } = await supabase
-      .from('beats')
-      .select('*', { count: 'exact', head: true })
+      .eq('admin_approved', true)
       .eq('exclusive', true)
-      .eq('hidden', false)
-      .eq('admin_approved', true);
+      .order('created_at', { ascending: false })
+      .limit(12);
 
-    setHasExclusives((excCount || 0) > 0);
+    setExclusiveSongs((exclusiveData || []) as ProdBySong[]);
+    setHasExclusives(((exclusiveData || []) as ProdBySong[]).length > 0);
   }, []);
 
   useEffect(() => {
@@ -155,19 +151,45 @@ export function HomeRoom() {
   };
 
   const handlePlayFeatured = async () => {
-    const { data, error } = await supabase
-      .from('prod_by_songs')
-      .select('*')
-      .eq('hidden', false)
-      .order('created_at', { ascending: false })
-      .limit(12);
-
-    if (error || !data || data.length === 0) {
-      setCurrentRoom('prodby');
+    if (latestDrops.length === 0) {
+      setCurrentRoom('beatlab');
       return;
     }
 
-    audio.playQueue(data as any, 0, false);
+    const playable = latestDrops.filter((beat) => beat.audio_file_url);
+
+    if (playable.length === 0) {
+      setCurrentRoom('beatlab');
+      return;
+    }
+
+    audio.playQueue(playable, 0, false);
+  };
+
+  const handlePlayExclusive = (song: ProdBySong) => {
+    if (!song.audio_file_url) {
+      setCurrentRoom('exclusives');
+      return;
+    }
+
+    audio.play(song, false);
+  };
+
+  const handlePlayLatest = (beat: Beat) => {
+    if (!beat.audio_file_url) {
+      setCurrentRoom('beatlab');
+      return;
+    }
+
+    const playable = latestDrops.filter((item) => item.audio_file_url);
+    const startIndex = playable.findIndex((item) => item.id === beat.id);
+
+    if (startIndex >= 0) {
+      audio.playQueue(playable, startIndex, false);
+      return;
+    }
+
+    audio.play(beat, false);
   };
 
   const handleAdminCodeSubmit = (event: React.FormEvent) => {
@@ -199,7 +221,7 @@ export function HomeRoom() {
     <div className="min-h-screen relative">
       <div className="flex items-center justify-between px-4 pt-safe pt-3 pb-2 relative z-10">
         <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentRoom('home')} className="flex-shrink-0">
+          <button onClick={() => setCurrentRoom('home')} title="Go to home" aria-label="Go to home" className="flex-shrink-0">
             <img
               src={MAIN_LOGO}
               alt="ThisBeatIzBananaz"
@@ -209,6 +231,8 @@ export function HomeRoom() {
 
           <button
             onClick={handleShare}
+            title="Share app"
+            aria-label="Share app"
             className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#666] hover:text-[#f5c518] transition-all"
           >
             <Share2 size={15} />
@@ -228,6 +252,8 @@ export function HomeRoom() {
 
           <button
             onClick={() => setCartOpen(true)}
+            title="Open Beat Box"
+            aria-label="Open Beat Box"
             className="relative p-2 rounded-xl bg-[#141414] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518] hover:border-[#f5c518]/30 transition-all"
           >
             <img src={GRAB_ICON} alt="" className="w-4 h-4 object-contain" />
@@ -242,6 +268,8 @@ export function HomeRoom() {
           {isAdmin && (
             <button
               onClick={() => setCurrentRoom('admin')}
+              title="Open admin notifications"
+              aria-label="Open admin notifications"
               className="relative p-2 rounded-xl bg-[#141414] border border-[#1e1e1e] hover:border-[#f5c518]/20 transition-all"
             >
               <img src={NOTI_ICON} alt="" className="w-4 h-4 object-contain" />
@@ -260,7 +288,7 @@ export function HomeRoom() {
         <div className="mx-4 mb-2 p-3 bg-[#111] border border-[#f5c518]/20 rounded-xl flex items-center justify-between relative z-10">
           <span className="text-xs text-[#aaa]">
             {iosPWA
-              ? 'Tap Share → Add to Home Screen'
+              ? 'Tap Share -> Add to Home Screen'
               : 'Install ThisBeatIzBananaz App'}
           </span>
 
@@ -275,6 +303,8 @@ export function HomeRoom() {
 
           <button
             onClick={() => setShowPWA(false)}
+            title="Dismiss install message"
+            aria-label="Dismiss install message"
             className="ml-2 text-[#555] hover:text-white transition-colors text-lg leading-none"
           >
             &times;
@@ -334,58 +364,144 @@ export function HomeRoom() {
             onClick={admin.registerAdminTap}
             className="admin-pill mt-3 px-6 py-1.5 text-[10px] text-[#2a2a2a] font-mono tracking-widest"
           >
-            ···
+            ...
           </button>
         )}
       </div>
 
-      <div className="px-4 pb-5 relative z-10">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="font-display text-lg font-900 text-white uppercase tracking-wide">
-              Latest Drops
-            </h2>
-            <p className="text-xs text-[#777]">Fresh out the pot!</p>
+      <div className="px-4 pb-5 relative z-10 space-y-5">
+        <div className="section-shell p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 className="font-display text-xl font-900 text-white uppercase tracking-[0.08em]">
+                Latest Drops
+              </h2>
+              <p className="text-sm text-[#8d8d8d]">Fresh drops from the lab, ready to run.</p>
+            </div>
+
+            <button
+              onClick={() => setCurrentRoom('beatlab')}
+              className="premium-action text-xs text-[#f5c518] font-bold uppercase tracking-[0.22em]"
+            >
+              View All
+            </button>
           </div>
 
-          <button
-            onClick={() => setCurrentRoom('beatlab')}
-            className="text-xs text-[#f5c518] font-bold uppercase tracking-widest"
-          >
-            View All
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           {latestDrops.length > 0 ? (
-            latestDrops.map((beat) => (
-              <button
-                key={beat.id}
-                onClick={() => audio.play(beat, false)}
-                className="rounded-2xl bg-[#111] border border-[#1e1e1e] p-3 text-left hover:border-[#f5c518]/30 transition-all"
-              >
-                <div className="aspect-square rounded-xl overflow-hidden bg-black/40 mb-2">
-                  <img
-                    src={beat.cover_art_url || MAIN_LOGO}
-                    alt={beat.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            <div className="-mx-4 px-4 overflow-x-auto scroll-x pb-1">
+              <div className="flex gap-3 min-w-max">
+                {latestDrops.map((beat, index) => (
+                  <button
+                    key={beat.id}
+                    onClick={() => handlePlayLatest(beat)}
+                    className={`latest-drop-card ${index === 0 ? 'latest-drop-card-featured' : ''}`}
+                  >
+                    <div className="relative aspect-[0.96] overflow-hidden rounded-[1.15rem] bg-black">
+                      <img
+                        src={beat.cover_art_url || MAIN_LOGO}
+                        alt={beat.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/5" />
 
-                <div className="font-display text-xs font-800 text-white uppercase truncate">
-                  {beat.title}
-                </div>
+                      <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+                        <span className="status-badge status-badge-gold">
+                          {beat.genre?.split(',')[0]?.trim() || 'Drop'}
+                        </span>
+                        {beat.sold ? (
+                          <span className="status-badge status-badge-danger">Sold</span>
+                        ) : isBeatFree(beat) ? (
+                          <span className="status-badge status-badge-success">Free</span>
+                        ) : null}
+                      </div>
 
-                <div className="text-[10px] text-[#f5c518] mt-1">
-                  ${beat.price || 30}
-                </div>
-              </button>
-            ))
+                      <div className="absolute left-3 right-3 bottom-3 text-left">
+                        <div className="latest-drop-title">{beat.title}</div>
+                        <div className="text-xs text-[#c8c8c8] mt-1 line-clamp-2">
+                          {beat.description || beat.artist_suggestion || beat.vibe || 'Fresh from the lab.'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 mt-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-[0.22em] text-[#686868] truncate">
+                          Latest Drop
+                        </div>
+                        <div className={`font-display text-lg font-900 leading-none mt-1 ${isBeatFree(beat) ? 'text-green-400' : 'text-[#f5c518]'}`}>
+                          {getBeatPriceLabel(beat)}
+                        </div>
+                      </div>
+
+                      <div className="premium-play-chip">
+                        <img src={PLAY_ICON} alt="" className="w-4 h-4 object-contain" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="col-span-2 rounded-2xl border border-[#1e1e1e] bg-[#101010] p-4 text-center text-xs text-[#777]">
-              Latest drops will appear here.
+            <div className="rounded-[1.4rem] border border-[#1e1e1e] bg-[#101010] p-5 text-center text-sm text-[#777]">
+              Latest drops will hit here as soon as they are released.
             </div>
           )}
+        </div>
+
+        <div className="section-shell p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-display text-lg font-900 text-white uppercase tracking-wide">
+                Exclusives
+              </h2>
+              <p className="text-xs text-[#777]">Premium records and requests.</p>
+            </div>
+
+            <button
+              onClick={() => setCurrentRoom('exclusives')}
+              className="premium-action text-xs text-[#f5c518] font-bold uppercase tracking-widest"
+            >
+              View All
+            </button>
+          </div>
+
+          <div className="-mx-4 px-4 overflow-x-auto scroll-x pb-1">
+            {exclusiveSongs.length > 0 ? (
+              <div className="flex gap-2.5 min-w-max">
+                {exclusiveSongs.map((song) => (
+                  <button
+                    key={song.id}
+                    onClick={() => handlePlayExclusive(song)}
+                    className="w-28 sm:w-32 shrink-0 rounded-2xl bg-[#111] border border-[#1e1e1e] p-2 text-left hover:border-[#f5c518]/30 transition-all"
+                  >
+                    <div className="aspect-square rounded-xl overflow-hidden bg-black/40 mb-1.5">
+                      <img
+                        src={song.cover_art_url || MAIN_LOGO}
+                        alt={song.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="font-display text-[11px] font-800 text-white uppercase truncate leading-tight">
+                      {song.title}
+                    </div>
+
+                    <div className="text-[10px] text-[#888] truncate mt-0.5">
+                      {song.artist_name || 'Artist TBA'}
+                    </div>
+
+                    <div className="text-[10px] text-[#f5c518] mt-0.5">
+                      {getBeatPriceLabel(song)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[#1e1e1e] bg-[#101010] p-4 text-center text-xs text-[#777]">
+                Exclusive songs will appear here.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -466,9 +582,11 @@ export function HomeRoom() {
 
               <button
                 onClick={admin.closeGateway}
+                title="Close studio control room"
+                aria-label="Close studio control room"
                 className="w-8 h-8 rounded-full bg-white/5 text-[#777] hover:text-white"
               >
-                ×
+                x
               </button>
             </div>
 

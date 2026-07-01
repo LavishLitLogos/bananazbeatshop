@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useApp } from './context/AppContext';
 
 import { HomeRoom } from './components/rooms/HomeRoom';
@@ -21,6 +22,10 @@ import { ToastContainer } from './components/ui/Toast';
 
 function App() {
   const { currentRoom, cartOpen, isAdmin } = useApp();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentRoom]);
 
   const renderRoom = () => {
     if (currentRoom === 'home') return <HomeRoom />;

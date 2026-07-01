@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import type { Beat, Room } from '../types';
+import { canBuyBeat } from '../utils/beatAccess';
 import { useAdmin } from './AdminContext';
 import { useThemeMode } from './ThemeContext';
 
@@ -200,6 +201,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [admin]);
 
   const addToCart = useCallback((beat: Beat) => {
+    if (!canBuyBeat(beat)) return;
+
     setCart((currentCart) => {
       const alreadyInCart = currentCart.some((item) => item.id === beat.id);
 

@@ -67,7 +67,11 @@ export function CreditsRoom() {
     }
 
     if (audio.currentBeat?.id === song.id) {
-      audio.isPlaying ? audio.pause() : audio.resume();
+      if (audio.isPlaying) {
+        audio.pause();
+      } else {
+        audio.resume();
+      }
       return;
     }
 
