@@ -1,5 +1,5 @@
 import { Save, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat } from '../../types';
@@ -105,8 +105,38 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [savingUpload, setSavingUpload] = useState(false);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
 
   const editingBeat = Boolean(beat?.id);
+
+  useEffect(() => {
+    if (!audioFile) {
+      setAudioPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(audioFile);
+    setAudioPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [audioFile]);
+
+  useEffect(() => {
+    if (!coverFile) {
+      setCoverPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(coverFile);
+    setCoverPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [coverFile]);
 
   const updateUploadForm = <Key extends keyof BeatUploadFormState>(
     key: Key,
@@ -266,6 +296,30 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
           onChange={(event) => updateUploadForm('cover_art_url', event.target.value)}
           placeholder="Cover art URL"
         />
+
+        {(audioFile || form.audio_file_url) && (
+          <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3">
+            <div className="text-sm text-white">Audio Preview</div>
+            <audio
+              controls
+              className="mt-3 w-full"
+              src={audioPreviewUrl || form.audio_file_url}
+            />
+          </div>
+        )}
+
+        {(coverFile || form.cover_art_url) && (
+          <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3">
+            <div className="text-sm text-white">Cover Preview</div>
+            <div className="mt-3 overflow-hidden rounded-xl border border-[#1e1e1e] bg-black">
+              <img
+                src={coverPreviewUrl || form.cover_art_url}
+                alt="Cover preview"
+                className="w-full max-h-64 object-contain"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <input

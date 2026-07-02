@@ -377,6 +377,14 @@ export function GlobalPlayer() {
               )}
             </button>
 
+            <button
+              onClick={stop}
+              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
+              aria-label="Stop player"
+            >
+              <Square size={12} fill="currentColor" />
+            </button>
+
             {canPurchaseBeat && (
               <button
                 onClick={handleBuy}

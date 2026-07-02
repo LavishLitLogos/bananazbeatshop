@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   Download,
   Edit3,
-  ExternalLink,
   Filter,
   Lock,
   Pause,
@@ -12,6 +11,7 @@ import {
   Search,
   ShoppingBag,
   SlidersHorizontal,
+  Square,
   Trash2,
   X,
 } from 'lucide-react';
@@ -249,6 +249,11 @@ export function BeatLabRoom() {
     if (!canBuyBeat(beat)) return;
     setSelectedBeat(beat);
     setShowBuy(true);
+  };
+
+  const handleStop = (beat: Beat) => {
+    if (audio.currentBeat?.id !== beat.id) return;
+    audio.stop();
   };
 
   const handleAddToBox = (beat: Beat) => {
@@ -508,12 +513,11 @@ export function BeatLabRoom() {
               beat={beat}
               isCurrentlyPlaying={audio.currentBeat?.id === beat.id && audio.isPlaying}
               isCurrentBeat={audio.currentBeat?.id === beat.id}
-              onPlay={() => handlePlay(beat)}
               onQueue={() => handleQueueFromBeat(beat)}
+              onStop={() => handleStop(beat)}
               onBuy={() => handleBuy(beat)}
               onAddToBox={() => handleAddToBox(beat)}
               onFreeDL={() => handleFreeDL(beat)}
-              onPopOut={() => handlePopOut(beat)}
               isAdmin={isAdmin}
               adminEditMode={adminEditMode}
               deleting={deletingId === beat.id}
@@ -569,12 +573,11 @@ function BeatCard({
   beat,
   isCurrentlyPlaying,
   isCurrentBeat,
-  onPlay,
   onQueue,
+  onStop,
   onBuy,
   onAddToBox,
   onFreeDL,
-  onPopOut,
   isAdmin,
   adminEditMode,
   deleting,
@@ -585,12 +588,11 @@ function BeatCard({
   beat: Beat;
   isCurrentlyPlaying: boolean;
   isCurrentBeat: boolean;
-  onPlay: () => void;
   onQueue: () => void;
+  onStop: () => void;
   onBuy: () => void;
   onAddToBox: () => void;
   onFreeDL: () => void;
-  onPopOut: () => void;
   isAdmin: boolean;
   adminEditMode: boolean;
   deleting: boolean;
@@ -654,35 +656,13 @@ function BeatCard({
         </div>
 
         <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
-              onPopOut();
-            }}
-            className="w-7 h-7 rounded-lg bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518] flex items-center justify-center transition-all"
-            title="Pop out"
-          >
-            <ExternalLink size={12} />
-          </button>
+          <ShareButton
+            small
+            title={beat.title}
+            text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
+            className="bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518]"
+          />
         </div>
-
-        <button
-          onClick={(event) => {
-            event.stopPropagation();
-            onPlay();
-          }}
-          className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-100 sm:opacity-0 sm:hover:opacity-100 transition-opacity"
-          title={isCurrentlyPlaying ? 'Pause' : 'Play'}
-        >
-          <div className="w-11 h-11 rounded-full bg-[#f5c518] flex items-center justify-center shadow-xl">
-            {isCurrentlyPlaying ? (
-              <Pause size={18} fill="black" />
-            ) : (
-              <Play size={18} fill="black" className="ml-0.5" />
-            )}
-          </div>
-        </button>
 
         {isCurrentlyPlaying && (
           <div className="absolute bottom-1.5 left-1.5 flex items-end gap-[2px] h-4">
@@ -761,12 +741,13 @@ function BeatCard({
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onPopOut();
+              onStop();
             }}
-            className="h-10 px-2 rounded-xl bg-[#171717] border border-white/5 text-[#9a9a9a] hover:text-[#f5c518] hover:border-[#f5c518]/20 transition-all flex items-center justify-center"
-            title="Pop out"
+            disabled={!isCurrentBeat}
+            className="h-10 px-2 rounded-xl bg-[#171717] border border-white/5 text-[#9a9a9a] hover:text-[#f5c518] hover:border-[#f5c518]/20 disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+            title="Stop"
           >
-            <ExternalLink size={12} />
+            <Square size={12} fill="currentColor" />
           </button>
         </div>
 
