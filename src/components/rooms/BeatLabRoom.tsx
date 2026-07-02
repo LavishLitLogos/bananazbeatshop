@@ -112,7 +112,6 @@ export function BeatLabRoom() {
     setAdminEditMode,
     reorderMode,
     setReorderMode,
-    refreshContent,
     refreshKey,
   } = useApp();
 
@@ -165,7 +164,6 @@ export function BeatLabRoom() {
         { event: '*', schema: 'public', table: 'beats' },
         () => {
           fetchBeats();
-          refreshContent();
         }
       )
       .subscribe();
@@ -173,7 +171,7 @@ export function BeatLabRoom() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBeats, refreshContent]);
+  }, [fetchBeats]);
 
   const filteredBeats = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
@@ -315,7 +313,6 @@ export function BeatLabRoom() {
 
     addToast('Beat deleted.', 'success');
     await fetchBeats();
-    refreshContent();
   };
 
   const clearUploadState = () => {
@@ -358,8 +355,8 @@ export function BeatLabRoom() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <ShareButton
               small
-              title="ThisBeatIzBananaz Beats Lab"
-              text="Browse fresh cookups from ThisBeatIzBananaz."
+              title="ThisBeatIzBananaz™ Beats Lab"
+              text="Browse fresh cookups from ThisBeatIzBananaz™."
             />
 
             <button
@@ -561,7 +558,6 @@ export function BeatLabRoom() {
           onSave={async () => {
             clearUploadState();
             await fetchBeats();
-            refreshContent();
           }}
         />
       )}
@@ -659,7 +655,7 @@ function BeatCard({
           <ShareButton
             small
             title={beat.title}
-            text={`Check out "${beat.title}" by ThisBeatIzBananazâ„¢`}
+            text={`Check out "${beat.title}" by ThisBeatIzBananaz™™`}
             className="bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518]"
           />
         </div>
@@ -813,3 +809,4 @@ function BeatCard({
     </div>
   );
 }
+

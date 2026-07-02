@@ -5,6 +5,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat, ProdBySong, Room } from '../../types';
+import { BRAND_NAME } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -76,7 +77,7 @@ export function HomeRoom() {
         .eq('admin_approved', true)
         .eq('exclusive', true)
         .order('created_at', { ascending: false })
-        .limit(12),
+        .limit(20),
     ]);
 
     setTotalBeats(beatsCountRes.count || 0);
@@ -143,7 +144,7 @@ export function HomeRoom() {
 
   const handleShare = async () => {
     const shareData = {
-      title: 'ThisBeatIzBananaz Beat Shop',
+      title: `${BRAND_NAME} Beat Shop`,
       text: 'Ayo FAMZ, This Beat Iz BANANAZ!!',
       url: window.location.href,
     };
@@ -161,15 +162,15 @@ export function HomeRoom() {
   };
 
   const handlePlayFeatured = async () => {
-    if (latestDrops.length === 0) {
-      setCurrentRoom('beatlab');
+    if (exclusiveSongs.length === 0) {
+      setCurrentRoom('exclusives');
       return;
     }
 
-    const playable = latestDrops.filter((beat) => beat.audio_file_url);
+    const playable = exclusiveSongs.filter((song) => song.audio_file_url);
 
     if (playable.length === 0) {
-      setCurrentRoom('beatlab');
+      setCurrentRoom('exclusives');
       return;
     }
 
@@ -234,7 +235,7 @@ export function HomeRoom() {
           <button onClick={() => setCurrentRoom('home')} title="Go to home" aria-label="Go to home" className="flex-shrink-0">
             <img
               src={MAIN_LOGO}
-              alt="ThisBeatIzBananaz"
+              alt="ThisBeatIzBananaz™"
               className="w-9 h-9 object-contain"
             />
           </button>
@@ -299,7 +300,7 @@ export function HomeRoom() {
           <span className="text-xs text-[#aaa]">
             {iosPWA
               ? 'Tap Share -> Add to Home Screen'
-              : 'Install ThisBeatIzBananaz App'}
+              : 'Install ThisBeatIzBananaz™ App'}
           </span>
 
           {!iosPWA && deferredPrompt && (
@@ -331,7 +332,7 @@ export function HomeRoom() {
         >
           <img
             src={MAIN_LOGO}
-            alt="ThisBeatIzBananaz"
+            alt="ThisBeatIzBananaz™"
             className="w-52 h-52 object-contain drop-shadow-2xl"
             style={{
               filter: 'drop-shadow(0 0 15px rgba(245,197,24,0.3))',
@@ -340,7 +341,7 @@ export function HomeRoom() {
         </button>
 
         <div className="font-display text-4xl font-900 text-white tracking-tight text-center leading-tight mt-1 glow-gold-text">
-          ThisBeatIzBananaz
+          {BRAND_NAME}
         </div>
 
         <div className="flex items-center gap-2 text-[#f5c518] text-sm font-medium mt-2 text-center">
@@ -520,7 +521,7 @@ export function HomeRoom() {
           {ROOMS.filter((room) => room.id !== 'exclusives' || hasExclusives).map((room) => (
             <button
               key={room.id}
-              onClick={() => setCurrentRoom(room.id)}
+              onClick={() => setCurrentRoom(!isAdmin && room.id === 'prodby' ? 'credits' : room.id)}
               className="room-tile w-full aspect-square rounded-full"
             >
               <img src={room.icon} alt="" className="w-8 h-8 object-contain" />
@@ -562,7 +563,7 @@ export function HomeRoom() {
         <div className="fixed inset-0 z-[99999] bg-black/90 flex flex-col items-center justify-center gap-6 animate-[fadeIn_0.3s_ease]">
           <img
             src={MAIN_LOGO}
-            alt="ThisBeatIzBananaz"
+            alt="ThisBeatIzBananaz™"
             className="w-44 h-44 object-contain animate-logo-burst"
             style={{ filter: 'drop-shadow(0 0 40px #f5c518)' }}
           />
@@ -628,3 +629,4 @@ export function HomeRoom() {
     </div>
   );
 }
+

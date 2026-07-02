@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { useApp, useAudio } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat } from '../../types';
+import { BEAT_INFO_DEFAULT, BRAND_NAME } from '../../utils/branding';
 import { canBuyBeat, canDownloadBeat, DEFAULT_BEAT_PRICE, getBeatPriceLabel, getBeatPriceValue, isBeatFree, triggerBeatDownload } from '../../utils/beatAccess';
 import { ShareButton } from '../ui/ShareButton';
 
@@ -61,7 +62,7 @@ function createAdminForm(beat: Beat): AdminForm {
     vibe: beat.vibe || '',
     mood: beat.mood || '',
     description: beat.description || '',
-    terms: beat.terms || '',
+    terms: beat.terms || BEAT_INFO_DEFAULT,
     hidden: Boolean(beat.hidden),
     is_free: isBeatFree(beat),
     exclusive: Boolean(beat.exclusive),
@@ -454,7 +455,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
 
             <ShareButton
               title={beat.title}
-              text={`Check out "${beat.title}" by ThisBeatIzBananaz™`}
+              text={`Check out "${beat.title}" by ${BRAND_NAME}`}
               url={window.location.href}
               className="px-4 py-3 rounded-xl bg-[#171717] border border-white/5 text-[#888] hover:text-white flex-shrink-0"
             />

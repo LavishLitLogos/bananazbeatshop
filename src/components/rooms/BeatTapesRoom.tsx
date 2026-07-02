@@ -20,12 +20,14 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { BeatTape, BeatTapeTrack } from '../../types';
+import { BRAND_NAME } from '../../utils/branding';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const BEAT_TAPES_ICON = '/assets/icons/beattapes.png';
-const MAX_TRACKS = 12;
+const MIN_TRACKS = 3;
+const MAX_TRACKS = 6;
 const PREVIEW_SECONDS = 45;
 
 interface TapeWithTracks extends BeatTape {
@@ -76,7 +78,7 @@ function makePlayableTrack(tape: TapeWithTracks, track: BeatTapeTrack) {
   return {
     ...track,
     cover_art_url: tape.cover_art_url,
-    artist_name: 'ThisBeatIzBananaz',
+    artist_name: BRAND_NAME,
     description: tape.description,
   };
 }
@@ -89,7 +91,6 @@ export function BeatTapesRoom() {
     addToast,
     adminEditMode,
     setAdminEditMode,
-    refreshContent,
     refreshKey,
   } = useApp();
 
@@ -154,7 +155,6 @@ export function BeatTapesRoom() {
         { event: '*', schema: 'public', table: 'beat_tapes' },
         () => {
           fetchTapes();
-          refreshContent();
         }
       )
       .on(
@@ -162,7 +162,6 @@ export function BeatTapesRoom() {
         { event: '*', schema: 'public', table: 'beat_tape_tracks' },
         () => {
           fetchTapes();
-          refreshContent();
         }
       )
       .subscribe();
@@ -170,7 +169,7 @@ export function BeatTapesRoom() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchTapes, refreshContent]);
+  }, [fetchTapes]);
 
   const visibleTapes = useMemo(() => {
     return tapes.filter((tape) => isAdmin || (!tape.hidden && tape.admin_approved));
@@ -207,7 +206,7 @@ export function BeatTapesRoom() {
 
     const shareData = {
       title: tape.title,
-      text: `Preview "${tape.title}" on ThisBeatIzBananaz Beat Tapes.`,
+      text: `Preview "${tape.title}" on ${BRAND_NAME} Beat Tapes.`,
       url,
     };
 
@@ -312,7 +311,6 @@ export function BeatTapesRoom() {
 
     addToast('Beat tape deleted.', 'success');
     await fetchTapes();
-    refreshContent();
   };
 
   const closeUpload = () => {
@@ -356,8 +354,8 @@ export function BeatTapesRoom() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <ShareButton
               small
-              title="ThisBeatIzBananaz Beat Tapes"
-              text="Preview beat tapes from ThisBeatIzBananaz."
+              title={`${BRAND_NAME} Beat Tapes`}
+              text={`Preview beat tapes from ${BRAND_NAME}.`}
             />
 
             {isAdmin && (
@@ -458,7 +456,6 @@ export function BeatTapesRoom() {
           onSave={async () => {
             closeUpload();
             await fetchTapes();
-            refreshContent();
           }}
         />
       )}
@@ -547,7 +544,7 @@ function TapeCard({
 
                 <span>{sortedTracks.length} tracks</span>
 
-                <span>{tape.is_free ? 'Free' : `$${tape.price || 11}`}</span>
+                <span>{tape.is_free ? 'Free' : `$${tape.price || 20}`}</span>
 
                 {tape.colab_usable && <span>Co-Lab OK</span>}
 
@@ -712,7 +709,7 @@ function TapeUploadModal({
   const [title, setTitle] = useState(tape?.title || '');
   const [description, setDescription] = useState(tape?.description || '');
   const [coverUrl, setCoverUrl] = useState(tape?.cover_art_url || '');
-  const [price, setPrice] = useState(tape?.price || 11);
+  const [price, setPrice] = useState(tape?.price || 20);
   const [isFree, setIsFree] = useState(Boolean(tape?.is_free));
   const [colabUsable, setColabUsable] = useState(Boolean(tape?.colab_usable));
   const [released, setReleased] = useState(Boolean((tape as any)?.release_download));
@@ -792,7 +789,7 @@ function TapeUploadModal({
 
   const addTrack = () => {
     if (tracks.length >= MAX_TRACKS) {
-      addToast('Batch upload max is 12 tracks.', 'info');
+      addToast(`Batch upload max is ${MAX_TRACKS} tracks.`, 'info');
       return;
     }
 
@@ -842,8 +839,13 @@ function TapeUploadModal({
       (track) => track.title.trim() && track.url.trim()
     );
 
-    if (readyTracks.length === 0) {
-      addToast('Add at least one track.', 'error');
+    if (readyTracks.length < MIN_TRACKS) {
+      addToast(`Add at least ${MIN_TRACKS} tracks.`, 'error');
+      return;
+    }
+
+    if (readyTracks.length > MAX_TRACKS) {
+      addToast(`Beat tapes hold ${MIN_TRACKS} to ${MAX_TRACKS} tracks.`, 'error');
       return;
     }
 
@@ -924,7 +926,7 @@ function TapeUploadModal({
               {tape ? 'Edit Beat Tape' : 'New Beat Tape'}
             </div>
             <div className="text-[10px] text-[#666]">
-              Max 12 tracks Â· users get 45-second previews
+              {MIN_TRACKS}-{MAX_TRACKS} tracks · users get 45-second previews
             </div>
           </div>
 
@@ -1128,6 +1130,46 @@ function TapeUploadModal({
                 </div>
               ))}
             </div>
+
+            <label className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#2a2a2a] bg-black/25 px-4 py-3 text-xs font-bold uppercase tracking-widest text-[#aaa] hover:text-[#f5c518] cursor-pointer">
+              <Upload size={14} />
+              Batch Upload Tracks
+              <input
+                type="file"
+                accept="audio/*"
+                multiple
+                className="hidden"
+                onChange={async (event) => {
+                  const files = Array.from(event.target.files || []).slice(0, MAX_TRACKS);
+                  if (files.length === 0) return;
+
+                  setTracks(
+                    files.map((file) => ({
+                      title: file.name.replace(/\.[^/.]+$/, ''),
+                      url: '',
+                      uploading: true,
+                    }))
+                  );
+
+                  try {
+                    const uploadResults = await Promise.all(files.map((file) => uploadAudio(file)));
+                    setTracks(
+                      files.map((file, index) => ({
+                        title: file.name.replace(/\.[^/.]+$/, ''),
+                        url: uploadResults[index]?.url || '',
+                        uploading: false,
+                      }))
+                    );
+                    addToast('Batch track upload finished.', 'success');
+                  } catch {
+                    addToast('Batch track upload failed.', 'error');
+                    setTracks((currentTracks) =>
+                      currentTracks.map((track) => ({ ...track, uploading: false }))
+                    );
+                  }
+                }}
+              />
+            </label>
           </div>
 
           <button
@@ -1165,3 +1207,4 @@ function ToggleBox({
     </button>
   );
 }
+

@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
+import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE } from '../../utils/branding';
 import { getBeatPriceLabel } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -108,10 +109,10 @@ export function ExclusivesRoom() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: song ? song.title : 'ThisBeatIzBananaz Exclusives',
+          title: song ? song.title : `${BRAND_NAME} Exclusives`,
           text: song
-            ? `Listen to "${song.title}" â€” written, arranged, and produced by ThisBeatIzBananaz.`
-            : 'Exclusive songs written, arranged, and produced by ThisBeatIzBananaz.',
+            ? `Listen to "${song.title}" â€” written, arranged, and produced by ThisBeatIzBananaz™.`
+            : 'Exclusive songs written, arranged, and produced by ThisBeatIzBananaz™.',
           url,
         });
         return;
@@ -171,7 +172,7 @@ export function ExclusivesRoom() {
                 Exclusives
               </h1>
               <p className="text-sm text-[#777] mt-1 truncate">
-                Songs written, arranged, and produced by ThisBeatIzBananaz.
+                Songs written, arranged, and produced by {BRAND_NAME}.
               </p>
             </div>
           </div>
@@ -338,7 +339,10 @@ export function ExclusivesRoom() {
                 Exclusive Song
               </div>
               <div className="text-sm text-white mt-1">
-                Written, arranged, and produced by ThisBeatIzBananaz
+                {EXCLUSIVE_INFO_DEFAULT}
+              </div>
+              <div className="text-xs text-[#666] mt-1">
+                {EXCLUSIVE_STEMS_NOTE}
               </div>
               <div className="text-xs text-[#666] mt-1 flex items-center gap-1">
                 <Lock size={12} />
@@ -381,3 +385,4 @@ export function ExclusivesRoom() {
     </div>
   );
 }
+

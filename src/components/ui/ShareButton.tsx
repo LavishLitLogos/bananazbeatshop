@@ -1,4 +1,5 @@
 import { Share2 } from 'lucide-react';
+import { BRAND_NAME } from '../../utils/branding';
 
 interface ShareButtonProps {
   title?: string;
@@ -8,7 +9,7 @@ interface ShareButtonProps {
   small?: boolean;
 }
 
-export function ShareButton({ title = 'ThisBeatIzBananaz Beat Shop', text = 'Check out this fire beat!', url, className = '', small }: ShareButtonProps) {
+export function ShareButton({ title = `${BRAND_NAME} Beat Shop`, text = `Check out this fire release from ${BRAND_NAME}.`, url, className = '', small }: ShareButtonProps) {
   const shareUrl = url || window.location.href;
 
   const handleShare = async (e: React.MouseEvent) => {

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useApp, useAudio } from '../../context/AppContext';
 import type { Beat } from '../../types';
+import { BRAND_NAME } from '../../utils/branding';
 import { canBuyBeat, getBeatPriceLabel } from '../../utils/beatAccess';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { BuyModal } from '../modals/BuyModal';
@@ -37,7 +38,7 @@ function getArtistLine(item: any) {
     item.style ||
     item.type ||
     item.vibe ||
-    'ThisBeatIzBananaz'
+    BRAND_NAME
   );
 }
 

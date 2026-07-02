@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
+import { BEAT_INFO_DEFAULT } from '../../utils/branding';
 import { DEFAULT_BEAT_PRICE, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
 
 interface BeatUploadModalProps {
@@ -35,7 +36,7 @@ interface BeatUploadFormState {
   admin_approved: boolean;
 }
 
-const BEAT_UPLOAD_DEFAULT_TERMS = 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz';
+const BEAT_UPLOAD_DEFAULT_TERMS = BEAT_INFO_DEFAULT;
 
 function createBeatUploadForm(beat?: Beat | null): BeatUploadFormState {
   const freeBeat = beat ? isBeatFree(beat) : false;
@@ -197,7 +198,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
   };
 
   return (
-    <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="modal-backdrop">
       <div className="modal-box max-w-lg w-full p-5 space-y-4" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between gap-3">
           <div>

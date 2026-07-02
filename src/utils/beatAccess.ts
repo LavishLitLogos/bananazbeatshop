@@ -48,7 +48,7 @@ export function isBeatVisibleToBuyer(beat: Partial<Pick<Beat, 'hidden' | 'admin_
 
 export function isBeatInBeatLab(beat: BeatFlags, isAdmin = false) {
   if (!isAdmin && !isBeatVisibleToBuyer(beat)) return false;
-  return !isBeatExclusive(beat);
+  return true;
 }
 
 export function isBeatInFreeDLs(beat: BeatFlags, isAdmin = false) {

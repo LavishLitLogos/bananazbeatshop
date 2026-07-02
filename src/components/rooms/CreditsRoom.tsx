@@ -10,6 +10,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
+import { PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -42,6 +43,7 @@ export function CreditsRoom() {
       .select('*')
       .eq('hidden', false)
       .eq('admin_approved', true)
+      .eq('exclusive', false)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -80,15 +82,15 @@ export function CreditsRoom() {
 
   const handleShare = async (song?: CreditSong) => {
     const url = song ? getCreditUrl(song) : window.location.href;
-    const title = song ? `${song.title} Â· Produced by ThisBeatIzBananaz` : 'ThisBeatIzBananaz Credits';
+    const title = song ? `${song.title} Â· Produced by ThisBeatIzBananaz™` : 'ThisBeatIzBananaz™ Credits';
 
     try {
       if (navigator.share) {
         await navigator.share({
           title,
           text: song
-            ? `Listen to "${song.title}" by ${song.artist_name || 'Artist TBA'} â€” produced by ThisBeatIzBananaz.`
-            : 'Production credits and artist showcases from ThisBeatIzBananaz.',
+            ? `Listen to "${song.title}" by ${song.artist_name || 'Artist TBA'} â€” produced by ThisBeatIzBananaz™.`
+            : 'Production credits and artist showcases from ThisBeatIzBananaz™.',
           url,
         });
         return;
@@ -152,7 +154,7 @@ export function CreditsRoom() {
           </div>
 
           <p className="text-base text-[#bdbdbd] mt-3 leading-relaxed max-w-md mx-auto">
-            Songs produced by ThisBeatIzBananaz for artists around the world.
+            Songs produced by ThisBeatIzBananaz™ for artists around the world.
           </p>
 
           <p className="text-sm text-[#777] mt-2 max-w-sm mx-auto">
@@ -296,7 +298,7 @@ export function CreditsRoom() {
                 Credit
               </div>
               <div className="text-sm text-white mt-1">
-                Produced by ThisBeatIzBananaz
+                {PRODUCED_BY_INFO_DEFAULT}
               </div>
               {selectedCredit.rights_text && (
                 <div className="text-xs text-[#666] mt-1">
@@ -338,3 +340,4 @@ export function CreditsRoom() {
     </div>
   );
 }
+
