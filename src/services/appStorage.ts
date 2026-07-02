@@ -62,6 +62,9 @@ export type AdminSettingsState = {
   famzCount: number;
   bananazAppFamzCount: number;
   bananazAppSalesCount: number;
+  lifetimePaidOrders: number;
+  lifetimeRevenue: number;
+  creditedOrderIds: string[];
   manualSales: ManualSaleState[];
   licensingInfo: LicensingInfoState;
   contactInfo: ContactInfoState;
@@ -221,6 +224,9 @@ export const defaultAdminSettings: AdminSettingsState = {
   famzCount: 11203,
   bananazAppFamzCount: 0,
   bananazAppSalesCount: 0,
+  lifetimePaidOrders: 0,
+  lifetimeRevenue: 0,
+  creditedOrderIds: [],
   manualSales: [],
   licensingInfo: { ...defaultLicensingInfo },
   contactInfo: { ...defaultContactInfo, socials: { ...defaultSocials } },
@@ -274,6 +280,13 @@ function safeStringArray(value: unknown): string[] {
 
   return value.filter((item): item is string => typeof item === "string");
 }
+
+type CreditableOrderLike = {
+  id: string;
+  amount?: number | string | null;
+  payment_received?: boolean | null;
+  status?: string | null;
+};
 
 function safeSocials(value: unknown): SocialHandles {
   const maybeSocials = value && typeof value === "object" ? (value as Partial<SocialHandles>) : {};
@@ -361,6 +374,9 @@ function normalizeAdminSettings(value: unknown): AdminSettingsState {
     famzCount: safeNumber(settings.famzCount, 11203),
     bananazAppFamzCount: safeNumber(settings.bananazAppFamzCount),
     bananazAppSalesCount: safeNumber(settings.bananazAppSalesCount),
+    lifetimePaidOrders: safeNumber(settings.lifetimePaidOrders),
+    lifetimeRevenue: safeNumber(settings.lifetimeRevenue),
+    creditedOrderIds: safeStringArray(settings.creditedOrderIds),
     manualSales: safeManualSales(settings.manualSales),
     licensingInfo: normalizeLicensingInfo(settings.licensingInfo),
     contactInfo: normalizeContactInfo(settings.contactInfo),
@@ -518,6 +534,41 @@ export const appStorage = {
         manualSales: current.adminSettings.manualSales.filter((sale) => sale.id !== id),
       },
     }));
+  },
+
+  syncPaidOrderStats(orders: CreditableOrderLike[]): AdminSettingsState {
+    return updateAppState((current) => {
+      const creditedIds = new Set(current.adminSettings.creditedOrderIds);
+      let addedOrders = 0;
+      let addedRevenue = 0;
+
+      for (const order of orders) {
+        const id = safeString(order.id);
+        const isPaid = Boolean(order.payment_received) || order.status === "Sold" || order.status === "Released";
+
+        if (!id || !isPaid || creditedIds.has(id)) {
+          continue;
+        }
+
+        creditedIds.add(id);
+        addedOrders += 1;
+        addedRevenue += safeNumber(order.amount);
+      }
+
+      if (addedOrders === 0 && addedRevenue === 0) {
+        return current;
+      }
+
+      return {
+        ...current,
+        adminSettings: {
+          ...current.adminSettings,
+          lifetimePaidOrders: current.adminSettings.lifetimePaidOrders + addedOrders,
+          lifetimeRevenue: current.adminSettings.lifetimeRevenue + addedRevenue,
+          creditedOrderIds: Array.from(creditedIds),
+        },
+      };
+    }).adminSettings;
   },
 
   exportState(): string {

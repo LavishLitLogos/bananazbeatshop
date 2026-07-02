@@ -124,6 +124,7 @@ export function AdminPanel() {
   const [showBeatUpload, setShowBeatUpload] = useState(false);
   const [showManualSale, setShowManualSale] = useState(false);
   const [manualSale, setManualSale] = useState<ManualSaleForm>(manualSaleDefault);
+  const [adminSettings, setAdminSettings] = useState<AdminSettingsState>(() => appStorage.getAdminSettings());
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
@@ -141,10 +142,12 @@ export function AdminPanel() {
     setBeats((beatsRes.data || []) as Beat[]);
     setBeatTapes((tapesRes.data || []) as BeatTape[]);
     setProdBySongs((prodByRes.data || []) as ProdBySong[]);
-    setOrders((ordersRes.data || []) as Order[]);
+    const loadedOrders = (ordersRes.data || []) as Order[];
+    setOrders(loadedOrders);
     setSubmissions((submissionsRes.data || []) as Submission[]);
     setNotifications((notificationsRes.data || []) as Notification[]);
     setAuditLog((auditRes.data || []) as AuditEntry[]);
+    setAdminSettings(appStorage.syncPaidOrderStats(loadedOrders));
 
     const loadedBeats = (beatsRes.data || []) as Beat[];
     const loadedTapes = (tapesRes.data || []) as BeatTape[];
@@ -361,8 +364,8 @@ export function AdminPanel() {
     if (error) {
       addToast('Order update failed.', 'error');
     } else {
-      setOrders((currentOrders) =>
-        currentOrders.map((item) =>
+      setOrders((currentOrders) => {
+        const nextOrders = currentOrders.map((item) =>
           item.id === order.id
             ? {
                 ...item,
@@ -370,8 +373,11 @@ export function AdminPanel() {
                 updated_at: new Date().toISOString(),
               }
             : item
-        )
-      );
+        );
+
+        setAdminSettings(appStorage.syncPaidOrderStats(nextOrders));
+        return nextOrders;
+      });
 
       await logAction({
         admin_action: 'updated_order',
@@ -543,24 +549,22 @@ export function AdminPanel() {
   );
 
   const analytics = useMemo(() => {
-    const paidOrders = orders.filter((order) => order.payment_received || order.status === 'Sold' || order.status === 'Released');
     const pendingOrders = orders.filter((order) => !order.release_download || order.status === 'Pending Verification');
     const releasedOrders = orders.filter((order) => order.release_download);
-    const revenue = paidOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
 
     return {
       totalItems: beats.length + beatTapes.length + prodBySongs.length,
       visibleBeats: beats.filter((beat) => isBeatVisibleToBuyer(beat)).length,
       freeBeats: beats.filter((beat) => isBeatFree(beat)).length,
       exclusives: beats.filter((beat) => isBeatExclusive(beat)).length,
-      paidOrders: paidOrders.length,
+      paidOrders: adminSettings.lifetimePaidOrders,
       pendingOrders: pendingOrders.length,
       releasedOrders: releasedOrders.length,
       pendingSubmissions: submissions.filter((submission) => submission.status === 'Pending').length,
       unreadNotifications: notifications.filter((notification) => !notification.read).length,
-      revenue,
+      revenue: adminSettings.lifetimeRevenue,
     };
-  }, [beatTapes.length, beats, notifications, orders, prodBySongs.length, submissions]);
+  }, [adminSettings.lifetimePaidOrders, adminSettings.lifetimeRevenue, beatTapes.length, beats, notifications, orders, prodBySongs.length, submissions]);
 
   const tabButtons: Array<{ id: AdminTab; label: string; icon: JSX.Element; count?: number }> = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={15} /> },
