@@ -315,6 +315,7 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
+              data-fx="lightning"
               className="btn-gold w-full py-3 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <CreditCard size={16} />
@@ -350,7 +351,7 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
                 <span className="text-white font-black">{destination}</span>
               </div>
             )}
-            <button type="button" onClick={onClose} className="btn-gold px-8 py-3 rounded-xl text-sm">
+            <button type="button" onClick={onClose} data-fx="lightning" className="btn-gold px-8 py-3 rounded-xl text-sm">
               Done
             </button>
           </div>
