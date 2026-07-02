@@ -2,6 +2,7 @@ import { Save, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
+import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
 import { DEFAULT_BEAT_PRICE, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
 
@@ -63,44 +64,8 @@ function createBeatUploadForm(beat?: Beat | null): BeatUploadFormState {
   };
 }
 
-function beatUploadCleanFileName(name: string) {
-  const extension = name.split('.').pop()?.toLowerCase() || 'file';
-  const base = name
-    .replace(/\.[^/.]+$/, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-
-  return `${base || 'upload'}-${Date.now()}.${extension}`;
-}
-
-async function beatUploadFile(file: File, bucket: 'beat-audio' | 'cover-art', folder: string) {
-  const fileName = beatUploadCleanFileName(file.name);
-  const storagePath = `${folder}/${fileName}`;
-  const { data, error } = await supabase.storage.from(bucket).upload(storagePath, file, {
-    cacheControl: '3600',
-    upsert: false,
-    contentType: file.type || undefined,
-  });
-
-  if (error) {
-    throw new Error(error.message || `Upload failed in ${bucket}.`);
-  }
-
-  const savedPath = data?.path || storagePath;
-  const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(savedPath);
-  const publicUrl = publicData?.publicUrl;
-
-  if (!publicUrl) {
-    throw new Error(`Upload saved in ${bucket}, but no public URL returned.`);
-  }
-
-  return publicUrl;
-}
-
 export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps) {
-  const { addToast, refreshContent } = useApp();
+  const { addToast } = useApp();
   const [form, setForm] = useState<BeatUploadFormState>(() => createBeatUploadForm(beat));
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -171,12 +136,17 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
       let audioUrl = form.audio_file_url.trim();
       let coverUrl = form.cover_art_url.trim();
 
-      if (audioFile) {
-        audioUrl = await beatUploadFile(audioFile, 'beat-audio', 'audio');
+      const [audioResult, coverResult] = await Promise.all([
+        audioFile ? uploadAudio(audioFile) : Promise.resolve(null),
+        coverFile ? uploadCoverArt(coverFile) : Promise.resolve(null),
+      ]);
+
+      if (audioResult?.publicUrl) {
+        audioUrl = audioResult.publicUrl;
       }
 
-      if (coverFile) {
-        coverUrl = await beatUploadFile(coverFile, 'cover-art', 'covers');
+      if (coverResult?.publicUrl) {
+        coverUrl = coverResult.publicUrl;
       }
 
       const isFree = Boolean(form.is_free);
@@ -216,7 +186,6 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
         if (error) throw error;
       }
 
-      refreshContent();
       addToast(editingBeat ? 'Beat updated.' : 'Beat uploaded.', 'success');
       onSave();
     } catch (error) {

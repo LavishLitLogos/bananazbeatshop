@@ -5,13 +5,15 @@ import { useAdmin } from '../../context/AdminContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { Beat, ProdBySong, Room } from '../../types';
-import { getBeatPriceLabel, isBeatFree, isBeatVisibleToBuyer } from '../../utils/beatAccess';
+import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const FLAME_ICON = '/assets/images/glofirereact.png';
 const PLAY_ICON = '/assets/icons/play-icon.png';
 const GRAB_ICON = '/assets/icons/grab-icon.png';
 const NOTI_ICON = '/assets/images/notis.png';
+const MAX_LATEST_DROPS = 12;
+const HOME_LATEST_DROP_FIELDS = 'id,title,genre,description,artist_suggestion,vibe,cover_art_url,audio_file_url,price,is_free,sold,hidden,admin_approved,created_at';
 
 const ROOMS: { id: Room; label: string; icon: string }[] = [
   { id: 'beatlab', label: 'Beats Lab', icon: '/assets/icons/play-icon.png' },
@@ -54,26 +56,34 @@ export function HomeRoom() {
   const pwaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchHomeData = useCallback(async () => {
-    const { data: beatData } = await supabase
-      .from('beats')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [beatsCountRes, latestDropsRes, exclusiveRes] = await Promise.all([
+      supabase
+        .from('beats')
+        .select('id', { count: 'exact', head: true })
+        .eq('hidden', false)
+        .or('admin_approved.is.null,admin_approved.eq.true'),
+      supabase
+        .from('beats')
+        .select(HOME_LATEST_DROP_FIELDS)
+        .eq('hidden', false)
+        .or('admin_approved.is.null,admin_approved.eq.true')
+        .order('created_at', { ascending: false })
+        .limit(MAX_LATEST_DROPS),
+      supabase
+        .from('prod_by_songs')
+        .select('*')
+        .eq('hidden', false)
+        .eq('admin_approved', true)
+        .eq('exclusive', true)
+        .order('created_at', { ascending: false })
+        .limit(12),
+    ]);
 
-    const visibleBeats = ((beatData || []) as Beat[]).filter((beat) => isBeatVisibleToBuyer(beat));
-    setTotalBeats(visibleBeats.length);
-    setLatestDrops(visibleBeats.slice(0, 8));
-
-    const { data: exclusiveData } = await supabase
-      .from('prod_by_songs')
-      .select('*')
-      .eq('hidden', false)
-      .eq('admin_approved', true)
-      .eq('exclusive', true)
-      .order('created_at', { ascending: false })
-      .limit(12);
-
-    setExclusiveSongs((exclusiveData || []) as ProdBySong[]);
-    setHasExclusives(((exclusiveData || []) as ProdBySong[]).length > 0);
+    setTotalBeats(beatsCountRes.count || 0);
+    setLatestDrops((latestDropsRes.data || []) as Beat[]);
+    const nextExclusives = (exclusiveRes.data || []) as ProdBySong[];
+    setExclusiveSongs(nextExclusives);
+    setHasExclusives(nextExclusives.length > 0);
   }, []);
 
   useEffect(() => {
