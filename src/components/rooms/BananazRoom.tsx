@@ -463,12 +463,6 @@ export function BananazRoom() {
           </div>
 
           <div className="flex items-center gap-2">
-            {usingFallback && (
-              <span className="rounded-full border border-[#7a4a00] bg-[#2b1900] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#f5c518]">
-                Fallback
-              </span>
-            )}
-
             {isAdmin && (
               <>
                 <button

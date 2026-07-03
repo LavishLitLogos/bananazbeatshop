@@ -8,6 +8,7 @@ import { appStorage } from '../../services/appStorage';
 import type { Beat, ProdBySong, Room } from '../../types';
 import { BRAND_NAME } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
+import { isExclusiveSong } from '../../utils/exclusiveSongs';
 import { FamzProfileModal } from '../modals/FamzProfileModal';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -79,14 +80,15 @@ export function HomeRoom() {
         .select('*')
         .eq('hidden', false)
         .eq('admin_approved', true)
-        .eq('exclusive', true)
         .order('created_at', { ascending: false })
-        .limit(20),
+        .limit(40),
     ]);
 
     setTotalBeats(beatsCountRes.count || 0);
     setLatestDrops((latestDropsRes.data || []) as Beat[]);
-    const nextExclusives = (exclusiveRes.data || []) as ProdBySong[];
+    const nextExclusives = ((exclusiveRes.data || []) as ProdBySong[])
+      .filter((song) => isExclusiveSong(song))
+      .slice(0, 20);
     setExclusiveSongs(nextExclusives);
     setHasExclusives(nextExclusives.length > 0);
   }, []);

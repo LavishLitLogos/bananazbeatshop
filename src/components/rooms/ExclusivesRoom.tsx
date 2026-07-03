@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE } from '../../utils/branding';
 import { getBeatPriceLabel } from '../../utils/beatAccess';
+import { isExclusiveSong } from '../../utils/exclusiveSongs';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -50,14 +51,13 @@ export function ExclusivesRoom() {
       .select('*')
       .eq('hidden', false)
       .eq('admin_approved', true)
-      .eq('exclusive', true)
       .order('created_at', { ascending: false });
 
     if (error) {
       addToast('Exclusives failed to load.', 'error');
       setSongs([]);
     } else {
-      setSongs((data || []) as ExclusiveSong[]);
+      setSongs(((data || []) as ExclusiveSong[]).filter((song) => isExclusiveSong(song)));
     }
 
     setLoading(false);

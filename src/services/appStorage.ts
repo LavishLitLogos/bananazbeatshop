@@ -205,11 +205,11 @@ export const defaultProducerProfile: ProducerProfileState = {
 
 export const defaultLicensingInfo: LicensingInfoState = {
   beats:
-    'Beats - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Available for submissions.',
+    'Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Available for submissions.',
   freeDownloads:
-    'Free DL\'s - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Not available for submissions.',
+    'Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Not available for submissions.',
   producedBy:
-    'Produced by - All songs are considered demos, even though they are singles. They showcase song-writing, production, arrangements & concepts of the producer. All rights reserved, Rawheart Waymakerz Music Group© 2025. Owned by ThisBeatIzBananaz™',
+    'All songs are considered demos, even though they are singles. They showcase song-writing, production, arrangements & concepts of the producer. All rights reserved, Rawheart Waymakerz Music Group© 2025. Owned by ThisBeatIzBananaz™',
 };
 
 export const defaultContactInfo: ContactInfoState = {
@@ -281,6 +281,13 @@ function safeStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+function stripLicensingPrefix(value: string): string {
+  return value
+    .replace(/^Beats\s*-\s*/i, "")
+    .replace(/^Free DL'?s\s*-\s*/i, "")
+    .replace(/^Produced by\s*-\s*/i, "");
+}
+
 type CreditableOrderLike = {
   id: string;
   amount?: number | string | null;
@@ -349,9 +356,9 @@ function normalizeLicensingInfo(value: unknown): LicensingInfoState {
   const licensing = value && typeof value === "object" ? (value as Partial<LicensingInfoState>) : {};
 
   return {
-    beats: safeString(licensing.beats) || defaultLicensingInfo.beats,
-    freeDownloads: safeString(licensing.freeDownloads) || defaultLicensingInfo.freeDownloads,
-    producedBy: safeString(licensing.producedBy) || defaultLicensingInfo.producedBy,
+    beats: stripLicensingPrefix(safeString(licensing.beats) || defaultLicensingInfo.beats),
+    freeDownloads: stripLicensingPrefix(safeString(licensing.freeDownloads) || defaultLicensingInfo.freeDownloads),
+    producedBy: stripLicensingPrefix(safeString(licensing.producedBy) || defaultLicensingInfo.producedBy),
   };
 }
 
@@ -519,7 +526,7 @@ export const appStorage = {
       adminSettings: {
         ...current.adminSettings,
         bananazAppSalesCount: current.adminSettings.bananazAppSalesCount + 1,
-        manualSales: [newSale, ...current.adminSettings.manualSales],
+        manualSales: [newSale, ...current.adminSettings.manualSales].slice(0, 4),
       },
     }));
 

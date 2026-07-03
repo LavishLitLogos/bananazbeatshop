@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
+import { isExclusiveSong, isSongMarkedExclusiveByText } from '../../utils/exclusiveSongs';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -613,9 +614,9 @@ function SongUploadModal({
   const [audioUrl, setAudioUrl] = useState(song?.audio_file_url || '');
   const [coverUrl, setCoverUrl] = useState(song?.cover_art_url || '');
   const [price, setPrice] = useState(Number(song?.price || 250));
-  const [isFree, setIsFree] = useState(song?.exclusive ? false : true);
+  const [isFree, setIsFree] = useState(isExclusiveSong(song || {}) ? false : true);
   const [released, setReleased] = useState(Boolean(song?.release_download));
-  const [exclusive, setExclusive] = useState(Boolean(song?.exclusive));
+  const [exclusive, setExclusive] = useState(isExclusiveSong(song || {}));
   const [noSharing, setNoSharing] = useState(Boolean(song?.no_sharing));
   const [hidden, setHidden] = useState(Boolean(song?.hidden));
   const [saving, setSaving] = useState(false);
@@ -672,17 +673,26 @@ function SongUploadModal({
 
     setSaving(true);
 
+    const markerExclusive = isSongMarkedExclusiveByText({
+      title,
+      artist_name: artistName,
+      description,
+      rights_text: rightsText,
+    });
+    const shouldTreatAsExclusive = exclusive || markerExclusive;
+    const shouldBeFree = shouldTreatAsExclusive ? false : isFree;
+
     const payload = {
       title: title.trim(),
       artist_name: artistName.trim(),
       description: description.trim(),
-      rights_text: rightsText.trim() || (exclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : PRODUCED_BY_INFO_DEFAULT),
+      rights_text: rightsText.trim() || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : PRODUCED_BY_INFO_DEFAULT),
       audio_file_url: audioUrl.trim(),
       cover_art_url: coverUrl.trim(),
-      price: exclusive ? Number(price) || 250 : 0,
-      is_free: exclusive ? false : true,
-      release_download: exclusive ? released : true,
-      exclusive,
+      price: shouldTreatAsExclusive ? Number(price) || 250 : 0,
+      is_free: shouldBeFree,
+      release_download: shouldTreatAsExclusive ? released : true,
+      exclusive: shouldTreatAsExclusive,
       no_sharing: noSharing,
       admin_approved: true,
       hidden,

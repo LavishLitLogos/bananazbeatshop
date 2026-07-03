@@ -24,11 +24,15 @@ import {
   type ProducerProfileState,
   type SocialHandles,
 } from '../../services/appStorage';
+import {
+  loadProducerProfile,
+  PROFILE_IMAGE_STORAGE_KEY,
+  saveProducerProfile,
+  saveStoredProfileImageUrl,
+} from '../../services/profilePersistence';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const MAX_UPLOAD_BYTES = 40 * 1024 * 1024;
-const PROFILE_IMAGE_STORAGE_KEY = 'thisbeatizbananaz.profileImageUrl.v1';
-
 interface PartnerLink {
   id: string;
   title: string;
@@ -93,14 +97,6 @@ function readProfileImageUrl() {
   }
 
   return window.localStorage.getItem(PROFILE_IMAGE_STORAGE_KEY) || MAIN_LOGO;
-}
-
-function saveProfileImageUrl(url: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(PROFILE_IMAGE_STORAGE_KEY, url);
 }
 
 function joinList(items: string[]) {
@@ -171,14 +167,17 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
   const [partnersOpen, setPartnersOpen] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [profileUploading, setProfileUploading] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   const profileImageInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProfileExtras = useCallback(async () => {
     setLoading(true);
-    setProfile(appStorage.getProfile());
-    setProfileImageUrl(readProfileImageUrl());
+    const loadedProfile = await loadProducerProfile();
+    setProfile(loadedProfile.profile);
+    setProfileImageUrl(loadedProfile.profileImageUrl || MAIN_LOGO);
+    setProfileId(loadedProfile.profileId);
 
     const { data: partnerData } = await supabase
       .from('profile_partners')
@@ -302,14 +301,22 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
     }));
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setSaving(true);
-    appStorage.saveProfile(profile);
-    saveProfileImageUrl(profileImageUrl);
-    addToast('Profile saved.', 'success');
-    setSaving(false);
-    setEditMode(false);
-    refreshContent();
+
+    try {
+      const saved = await saveProducerProfile(profile, profileImageUrl, profileId);
+      setProfile(saved.profile);
+      setProfileImageUrl(saved.profileImageUrl || MAIN_LOGO);
+      setProfileId(saved.profileId);
+      addToast('Profile saved.', 'success');
+      setEditMode(false);
+      refreshContent();
+    } catch {
+      addToast('Profile save failed.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,7 +333,7 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
     try {
       const result = await uploadProfileMedia(file);
       setProfileImageUrl(result.url);
-      saveProfileImageUrl(result.url);
+      saveStoredProfileImageUrl(result.url);
       addToast('Profile image uploaded.', 'success');
     } catch {
       addToast('Profile image upload failed. Check profile-media storage bucket.', 'error');
@@ -572,7 +579,11 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
 
             {isAdmin && (
               <button
-                onClick={() => setEditMode(!editMode)}
+                onClick={() => {
+                  if (!saving) {
+                    setEditMode(!editMode);
+                  }
+                }}
                 className={`p-2 rounded-xl border transition-all ${
                   editMode
                     ? 'bg-[#f5c518] border-[#f5c518] text-black'
@@ -788,7 +799,7 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
 
                 {editMode && isAdmin && (
                   <button
-                    onClick={handleSaveProfile}
+                    onClick={() => void handleSaveProfile()}
                     disabled={saving}
                     className="btn-gold w-full py-3 rounded-2xl mt-4 flex items-center justify-center gap-2 disabled:opacity-50"
                   >

@@ -38,6 +38,7 @@ import {
   type ManualSaleState,
   type ProducerProfileState,
 } from '../../services/appStorage';
+import { loadProducerProfile, saveProducerProfile } from '../../services/profilePersistence';
 
 type AdminTab = 'overview' | 'beats' | 'tapes' | 'prodby' | 'orders' | 'submissions' | 'notifications' | 'settings';
 type DetailModal = 'beats' | 'tapes' | 'prodby' | 'orders' | 'submissions' | 'notifications' | null;
@@ -129,14 +130,15 @@ export function AdminPanel() {
   const loadAdminData = useCallback(async () => {
     setLoading(true);
 
-    const [beatsRes, tapesRes, prodByRes, ordersRes, submissionsRes, notificationsRes, auditRes] = await Promise.all([
+    const [beatsRes, tapesRes, prodByRes, ordersRes, submissionsRes, notificationsRes, auditRes, profileRes] = await Promise.all([
       supabase.from('beats').select('*').order('created_at', { ascending: false }),
       supabase.from('beat_tapes').select('*').order('created_at', { ascending: false }),
       supabase.from('prod_by_songs').select('*').order('created_at', { ascending: false }),
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('submissions').select('*').order('created_at', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
-      supabase.from('admin_audit_log').select('*').order('created_at', { ascending: false }).limit(60),
+      supabase.from('admin_audit_log').select('*').order('created_at', { ascending: false }).limit(4),
+      loadProducerProfile(),
     ]);
 
     setBeats((beatsRes.data || []) as Beat[]);
@@ -148,6 +150,9 @@ export function AdminPanel() {
     setNotifications((notificationsRes.data || []) as Notification[]);
     setAuditLog((auditRes.data || []) as AuditEntry[]);
     setAdminSettings(appStorage.syncPaidOrderStats(loadedOrders));
+    if (profileRes?.profile) {
+      appStorage.saveProfile(profileRes.profile);
+    }
 
     const loadedBeats = (beatsRes.data || []) as Beat[];
     const loadedTapes = (tapesRes.data || []) as BeatTape[];
@@ -200,6 +205,17 @@ export function AdminPanel() {
       target_id: entry.target_id,
       details: entry.details || {},
     });
+
+    const { data: recentRows } = await supabase
+      .from('admin_audit_log')
+      .select('id')
+      .order('created_at', { ascending: false });
+
+    const staleIds = (recentRows || []).slice(4).map((row) => row.id).filter(Boolean);
+
+    if (staleIds.length > 0) {
+      await supabase.from('admin_audit_log').delete().in('id', staleIds);
+    }
   };
 
   const refreshEverything = async () => {
@@ -461,19 +477,17 @@ export function AdminPanel() {
   };
 
   const createManualSale = async () => {
-    if (!manualSale.buyer_name.trim() || !manualSale.buyer_email.trim() || !manualSale.beat_name.trim()) {
-      addToast('Manual sale needs buyer, contact, and beat name.', 'error');
-      return;
-    }
-
     const amount = Number(manualSale.amount || 0);
+    const beatName = manualSale.beat_name.trim() || 'Untitled Sale';
+    const buyerName = manualSale.buyer_name.trim() || 'Private buyer';
+    const buyerEmail = manualSale.buyer_email.trim() || 'private@bananaz.local';
 
     setBusyId('manual-sale');
 
     const { error } = await supabase.from('orders').insert({
-      buyer_name: manualSale.buyer_name.trim(),
-      buyer_email: manualSale.buyer_email.trim(),
-      beat_name: manualSale.beat_name.trim(),
+      buyer_name: buyerName,
+      buyer_email: buyerEmail,
+      beat_name: beatName,
       payment_method: manualSale.payment_method.trim() || 'Manual',
       amount,
       status: 'Sold',
@@ -490,10 +504,10 @@ export function AdminPanel() {
       await logAction({
         admin_action: 'manual_sale_entry',
         target_table: 'orders',
-        target_id: manualSale.beat_name.trim(),
+        target_id: beatName,
         details: {
-          buyer_name: manualSale.buyer_name.trim(),
-          buyer_email: manualSale.buyer_email.trim(),
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
           amount,
         },
       });
@@ -1152,6 +1166,7 @@ function SettingsTab({
   onRefresh: () => void;
   onLogout: () => void;
 }) {
+  const { addToast } = useApp();
   const [editingSection, setEditingSection] = useState<EditableSectionId | null>(null);
   const [profile, setProfile] = useState<ProducerProfileState>(() => appStorage.getProfile());
   const [adminSettings, setAdminSettings] = useState<AdminSettingsState>(() => appStorage.getAdminSettings());
@@ -1195,10 +1210,20 @@ function SettingsTab({
     setEditingSection(null);
   };
 
-  const saveProfile = () => {
-    const savedProfile = appStorage.saveProfile(profile);
-    setProfile(savedProfile);
-    setEditingSection(null);
+  const saveProfile = async () => {
+    try {
+      const currentProfileMeta = await loadProducerProfile();
+      const savedProfile = await saveProducerProfile(
+        profile,
+        currentProfileMeta.profileImageUrl,
+        currentProfileMeta.profileId
+      );
+      setProfile(savedProfile.profile);
+      setEditingSection(null);
+      addToast('Profile saved.', 'success');
+    } catch {
+      addToast('Profile save failed.', 'error');
+    }
   };
 
   const saveAdminSettings = () => {
@@ -1232,13 +1257,9 @@ function SettingsTab({
   };
 
   const addManualSale = () => {
-    if (!manualSaleForm.beatName.trim()) {
-      return;
-    }
-
     const sale: Omit<ManualSaleState, 'id' | 'createdAt'> = {
       beatId: manualSaleForm.beatId.trim(),
-      beatName: manualSaleForm.beatName.trim(),
+      beatName: manualSaleForm.beatName.trim() || 'Untitled Sale',
       price: Number(manualSaleForm.price || 0),
       buyerName: manualSaleForm.buyerName.trim(),
       buyerEmail: manualSaleForm.buyerEmail.trim(),
@@ -1487,7 +1508,7 @@ function SettingsTab({
 
         {adminSettings.manualSales.length > 0 && (
           <div className="space-y-2">
-            {adminSettings.manualSales.slice(0, 10).map((sale) => (
+            {adminSettings.manualSales.slice(0, 4).map((sale) => (
               <div key={sale.id} className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm text-white font-semibold truncate">{sale.beatName || 'Untitled Sale'}</div>
@@ -1628,7 +1649,7 @@ function SettingsTab({
         {auditLog.length === 0 ? (
           <div className="text-xs text-[#555]">No audit activity found.</div>
         ) : (
-          auditLog.slice(0, 12).map((entry, index) => (
+          auditLog.slice(0, 4).map((entry, index) => (
             <div key={`${entry.admin_action}-${entry.target_id}-${index}`} className="rounded-xl bg-[#0d0d0d] border border-[#1d1d1d] p-3">
               <div className="text-xs text-white font-semibold">{entry.admin_action}</div>
               <div className="text-[11px] text-[#666] mt-1">

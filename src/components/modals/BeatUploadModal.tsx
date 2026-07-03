@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 import type { Beat } from '../../types';
+import { renderTaggedAudio } from '../../utils/audioTagger';
 import { BEAT_INFO_DEFAULT } from '../../utils/branding';
 import { DEFAULT_BEAT_PRICE, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
 
@@ -73,6 +74,10 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
   const [savingUpload, setSavingUpload] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
+  const [tagEnabled, setTagEnabled] = useState(false);
+  const [tagFile, setTagFile] = useState<File | null>(null);
+  const [tagPreviewUrl, setTagPreviewUrl] = useState('');
+  const [tagPlacements, setTagPlacements] = useState('');
 
   const editingBeat = Boolean(beat?.id);
 
@@ -103,6 +108,20 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
       URL.revokeObjectURL(objectUrl);
     };
   }, [coverFile]);
+
+  useEffect(() => {
+    if (!tagFile) {
+      setTagPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(tagFile);
+    setTagPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [tagFile]);
 
   const updateUploadForm = <Key extends keyof BeatUploadFormState>(
     key: Key,
@@ -136,9 +155,33 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
     try {
       let audioUrl = form.audio_file_url.trim();
       let coverUrl = form.cover_art_url.trim();
+      let sourceAudioFile = audioFile;
+
+      if (tagEnabled && tagFile) {
+        const placements = tagPlacements
+          .split(',')
+          .map((value) => Number(value.trim()))
+          .filter((value) => Number.isFinite(value) && value >= 0);
+
+        if (placements.length === 0) {
+          throw new Error('TAGNANAZ needs at least one placement time in seconds.');
+        }
+
+        if (!sourceAudioFile && !audioUrl) {
+          throw new Error('Upload or paste the beat audio before tagging it.');
+        }
+
+        sourceAudioFile = await renderTaggedAudio(
+          sourceAudioFile || audioUrl,
+          tagFile,
+          placements,
+          cleanTitle || 'tagged-beat'
+        );
+        audioUrl = '';
+      }
 
       const [audioResult, coverResult] = await Promise.all([
-        audioFile ? uploadAudio(audioFile) : Promise.resolve(null),
+        sourceAudioFile ? uploadAudio(sourceAudioFile) : Promise.resolve(null),
         coverFile ? uploadCoverArt(coverFile) : Promise.resolve(null),
       ]);
 
@@ -320,6 +363,58 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
           <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.style} onChange={(event) => updateUploadForm('style', event.target.value)} placeholder="Style tags" />
           <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.type} onChange={(event) => updateUploadForm('type', event.target.value)} placeholder="Type tags" />
           <input className="input-dark w-full px-3 py-2.5 text-xs" value={form.vibe} onChange={(event) => updateUploadForm('vibe', event.target.value)} placeholder="Vibe tags" />
+        </div>
+
+        <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm text-white">TAGNANAZ</div>
+              <div className="text-[11px] text-[#666] mt-1">
+                Drop a beat tag on the upload and bake it into the beat file.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setTagEnabled((current) => !current)}
+              className={`rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-all ${
+                tagEnabled ? 'bg-[#f5c518] text-black' : 'bg-[#111] border border-[#222] text-[#aaa]'
+              }`}
+            >
+              {tagEnabled ? 'On' : 'Off'}
+            </button>
+          </div>
+
+          {tagEnabled && (
+            <>
+              <label className="rounded-xl border border-[#222] bg-black/40 p-3 cursor-pointer hover:border-[#f5c518]/35 block">
+                <div className="text-sm text-white">Beat Tag Audio</div>
+                <div className="text-[11px] text-[#666] mt-1 truncate">
+                  {tagFile?.name || 'Choose your beat tag MP3/WAV'}
+                </div>
+                <input
+                  className="hidden"
+                  type="file"
+                  accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav"
+                  onChange={(event) => setTagFile(event.target.files?.[0] || null)}
+                />
+              </label>
+
+              <input
+                className="input-dark w-full px-4 py-3 text-sm"
+                value={tagPlacements}
+                onChange={(event) => setTagPlacements(event.target.value)}
+                placeholder="Tag placements in seconds, comma-separated. Example: 0, 18.5, 37"
+              />
+
+              {tagPreviewUrl && (
+                <div className="rounded-xl border border-[#1e1e1e] bg-black/35 p-3">
+                  <div className="text-[11px] text-[#aaa] mb-2">Beat Tag Preview</div>
+                  <audio controls className="w-full" src={tagPreviewUrl} />
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <input
