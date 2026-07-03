@@ -345,10 +345,11 @@ export function GlobalPlayer() {
               {title}
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[#8c8c8c] mt-1 leading-tight">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#8c8c8c] mt-1 leading-tight">
               <span className="break-words whitespace-normal text-[#d6d6d6]">{artistLine}</span>
-              <span className="text-[#444]">�</span>
-              <span className="text-[#f5c518]">{queueLabel}</span>
+              <span className="rounded-full border border-[#2a2a2a] bg-[#131313] px-2 py-0.5 text-[10px] text-[#f5c518]">
+                {queueLabel}
+              </span>
             </div>
 
             <div className="text-[11px] text-[#666] mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">

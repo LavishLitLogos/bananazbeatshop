@@ -204,7 +204,7 @@ export function ExclusivesRoom() {
           </div>
 
           <p className="text-base text-[#bdbdbd] mt-3 leading-relaxed max-w-md mx-auto">
-            Full records built from the beat up â€” written, arranged, produced, and curated in-house.
+            Full records built from the beat up, written, arranged, produced, and curated in-house.
           </p>
         </div>
 
@@ -265,29 +265,42 @@ export function ExclusivesRoom() {
                     </div>
 
                     <div className="flex items-center gap-1 mt-1">
-                      <span
+                      <button
                         onClick={(event) => {
                           event.stopPropagation();
                           handlePlay(song);
                         }}
                         className="w-7 h-7 rounded-full bg-[#f5c518] text-black flex items-center justify-center"
+                        aria-label={isPlaying ? 'Pause exclusive' : 'Play exclusive'}
                       >
                         {isPlaying ? (
                           <Pause size={13} fill="black" />
                         ) : (
                           <Play size={13} fill="black" className="ml-0.5" />
                         )}
-                      </span>
+                      </button>
 
-                      <span
+                      <button
                         onClick={(event) => {
                           event.stopPropagation();
                           handleRequest(song);
                         }}
                         className="w-7 h-7 rounded-full bg-black/70 border border-white/10 text-white flex items-center justify-center"
+                        aria-label="Request exclusive"
                       >
                         <ShoppingBag size={12} />
-                      </span>
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleShare(song);
+                        }}
+                        disabled={Boolean(song.no_sharing)}
+                        className="w-7 h-7 rounded-full bg-black/70 border border-white/10 text-white flex items-center justify-center disabled:opacity-40"
+                        aria-label="Share exclusive"
+                      >
+                        <Share2 size={12} />
+                      </button>
                     </div>
                   </div>
                 </button>
@@ -308,7 +321,7 @@ export function ExclusivesRoom() {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="font-display font-900 text-2xl uppercase text-white leading-none">
+                <div className="font-display font-900 text-2xl text-white leading-none">
                   {selectedSong.title}
                 </div>
                 <div className="text-sm text-[#f5c518] mt-1">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Plus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
@@ -109,11 +109,11 @@ export function FreeDLsRoom() {
             </button>
 
             <div>
-              <h1 className="font-display font-800 text-xl uppercase tracking-wide text-white leading-none">
-                FREE DL&apos;s
+              <h1 className="font-display font-800 text-xl text-white leading-none">
+                Free DLs
               </h1>
               <p className="text-[10px] text-[#555] mt-0.5">
-                {beats.length} free beats · cookups for the community
+                {beats.length} free beats for the community
               </p>
             </div>
           </div>
@@ -137,13 +137,13 @@ export function FreeDLsRoom() {
         </div>
       </div>
 
-      <div className="px-4 py-4 grid grid-cols-2 gap-3 pb-32">
+      <div className="px-4 py-4 grid grid-cols-3 gap-3 pb-32 sm:grid-cols-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, index) => (
+          Array.from({ length: 8 }).map((_, index) => (
             <div key={index} className="beat-card aspect-square animate-pulse bg-[#111]" />
           ))
         ) : beats.length === 0 ? (
-          <div className="col-span-2 text-center py-16 text-[#444]">
+          <div className="col-span-3 text-center py-16 text-[#444] sm:col-span-4">
             <img
               src="/assets/icons/grab-icon.png"
               alt=""
@@ -171,7 +171,7 @@ export function FreeDLsRoom() {
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center">
                     <span className="text-3xl font-display font-900 text-[#f5c518]/20">
-                      FREE
+                      Free
                     </span>
                   </div>
                 )}
@@ -235,7 +235,7 @@ export function FreeDLsRoom() {
                       className="p-1.5 rounded-lg bg-[#1a1a1a] text-[#555] hover:text-[#f5c518] transition-all text-xs"
                       aria-label="Edit free download beat"
                     >
-                      ···
+                      <MoreHorizontal size={14} />
                     </button>
                   )}
                 </div>
@@ -273,7 +273,7 @@ export function FreeDLsRoom() {
               className="w-20 h-20 object-contain mx-auto"
             />
 
-            <div className="font-display text-xl font-800 text-[#f5c518] uppercase">
+            <div className="font-display text-xl font-800 text-[#f5c518]">
               Free DL
             </div>
 

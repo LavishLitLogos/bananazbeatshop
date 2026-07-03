@@ -619,7 +619,7 @@ export function AdminPanel() {
 
             <div className="min-w-0">
               <h1 className="font-display font-900 text-xl uppercase tracking-wide leading-none truncate">Admin Panel</h1>
-              <p className="text-[10px] text-[#555] mt-0.5">Owner controls · hidden from buyers</p>
+              <p className="text-[10px] text-[#555] mt-0.5">Owner controls - hidden from buyers</p>
             </div>
           </div>
 
@@ -902,7 +902,7 @@ function BeatsTab({
       </button>
 
       {beats.map((beat) => (
-        <AdminCard key={beat.id} title={beat.title} subtitle={`${getBeatPriceLabel(beat)} · ${isBeatExclusive(beat) ? 'Exclusive' : isBeatFree(beat) ? 'Free DL' : 'Beat Lab'}`} image={beat.cover_art_url}>
+        <AdminCard key={beat.id} title={beat.title} subtitle={`${getBeatPriceLabel(beat)} - ${isBeatExclusive(beat) ? 'Exclusive' : isBeatFree(beat) ? 'Free DL' : 'Beat Lab'}`} image={beat.cover_art_url}>
           <ToggleRow label="Exclusive" active={Boolean(beat.exclusive)} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { exclusive: !beat.exclusive })} />
           <ToggleRow label="Approved" active={beat.admin_approved !== false} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { admin_approved: beat.admin_approved === false })} />
           <ToggleRow label="Hidden" active={beat.hidden} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { hidden: !beat.hidden })} />
@@ -940,7 +940,7 @@ function TapesTab({
       {tapes.length === 0 && <EmptyState label="No beat tapes found." />}
 
       {tapes.map((tape) => (
-        <AdminCard key={tape.id} title={tape.title} subtitle={`${formatMoney(tape.price)} · Beat Tape`} image={tape.cover_art_url}>
+        <AdminCard key={tape.id} title={tape.title} subtitle={`${formatMoney(tape.price)} - Beat Tape`} image={tape.cover_art_url}>
           <ToggleRow label="Approved" active={tape.admin_approved !== false} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { admin_approved: tape.admin_approved === false })} />
           <ToggleRow label="Hidden" active={tape.hidden} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { hidden: !tape.hidden })} />
           <ToggleRow label="Free" active={tape.is_free} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { is_free: !tape.is_free })} />
@@ -997,7 +997,7 @@ function OrdersTab({
       {orders.length === 0 && <EmptyState label="No orders found." />}
 
       {orders.map((order) => (
-        <AdminCard key={order.id} title={order.beat_name} subtitle={`${order.buyer_name} · ${order.buyer_email}`}>
+        <AdminCard key={order.id} title={order.beat_name} subtitle={`${order.buyer_name} - ${order.buyer_email}`}> 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <InfoPill label="Method" value={order.payment_method} />
             <InfoPill label="Amount" value={formatMoney(order.amount)} />
@@ -1031,7 +1031,7 @@ function SubmissionsTab({
       {submissions.length === 0 && <EmptyState label="No submissions found." />}
 
       {submissions.map((submission) => (
-        <AdminCard key={submission.id} title={submission.song_title} subtitle={`${submission.buyer_name} · ${submission.buyer_email}`}>
+        <AdminCard key={submission.id} title={submission.song_title} subtitle={`${submission.buyer_name} - ${submission.buyer_email}`}> 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <InfoPill label="Status" value={submission.status} />
             <InfoPill label="Mics" value={submission.mic_rating ? `${submission.mic_rating}/5` : 'Not rated'} />
@@ -1103,7 +1103,7 @@ function NotificationsTab({
       {notifications.length === 0 && <EmptyState label="No notifications found." />}
 
       {notifications.map((notification) => (
-        <AdminCard key={notification.id} title={notification.title} subtitle={`${notification.type} · ${formatDate(notification.created_at)}`}>
+        <AdminCard key={notification.id} title={notification.title} subtitle={`${notification.type} - ${formatDate(notification.created_at)}`}> 
           {notification.body && <p className="text-xs text-[#888] leading-relaxed">{notification.body}</p>}
 
           <div className="grid grid-cols-2 gap-2">
@@ -1354,7 +1354,7 @@ function SettingsTab({
         onSave={saveProfile}
       >
         <AdminTextInput label="Display Name" value={profile.displayName} onChange={(value) => updateProfile('displayName', value)} />
-        <AdminTextInput label="Headline / Role Line" value={profile.headline} onChange={(value) => updateProfile('headline', value)} placeholder="Example: Producer · Composer · Sound Architect" />
+        <AdminTextInput label="Headline / Role Line" value={profile.headline} onChange={(value) => updateProfile('headline', value)} placeholder="Example: Producer - Composer - Sound Architect" />
         <AdminTextInput label="Slogan / Quote" value={profile.sloganQuote} onChange={(value) => updateProfile('sloganQuote', value)} />
         <AdminTextArea label="About The Producer" value={profile.aboutProducer} onChange={(value) => updateProfile('aboutProducer', value)} />
         <AdminTextArea label="Bio" value={profile.bio} onChange={(value) => updateProfile('bio', value)} />
@@ -1407,7 +1407,7 @@ function SettingsTab({
         </div>
 
         <AdminTextArea label="Additional Info" value={profile.additionalInfo} onChange={(value) => updateProfile('additionalInfo', value)} />
-        <ToggleRow label="Show “scan the QR 🔥” footer" active={profile.showQrFooter} onClick={() => updateProfile('showQrFooter', !profile.showQrFooter)} />
+        <ToggleRow label="Show scan the QR footer" active={profile.showQrFooter} onClick={() => updateProfile('showQrFooter', !profile.showQrFooter)} />
       </EditableSettingsSection>
 
       <EditableSettingsSection
@@ -1446,7 +1446,7 @@ function SettingsTab({
 
       <EditableSettingsSection
         id="broadcast"
-        title="Bananaz Mode Broadcast — Parked"
+        title="Bananaz Mode Broadcast - Parked"
         subtitle="Controls are locked and forced OFF so this feature cannot break the app."
         editingSection={editingSection}
         onEdit={setEditingSection}
@@ -1516,7 +1516,7 @@ function SettingsTab({
               <div key={sale.id} className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm text-white font-semibold truncate">{sale.beatName || 'Untitled Sale'}</div>
-                  <div className="text-xs text-[#777] mt-1">{formatMoney(sale.price)} · {sale.buyerName || 'Private buyer'}</div>
+                  <div className="text-xs text-[#777] mt-1">{formatMoney(sale.price)} - {sale.buyerName || 'Private buyer'}</div>
                   {sale.notes && <div className="text-[11px] text-[#555] mt-1">{sale.notes}</div>}
                 </div>
                 <button type="button" onClick={() => removeManualSale(sale.id)} className="text-red-400 p-2 rounded-lg hover:bg-red-950/20" aria-label="Remove manual sale">
@@ -1657,7 +1657,7 @@ function SettingsTab({
             <div key={`${entry.admin_action}-${entry.target_id}-${index}`} className="rounded-xl bg-[#0d0d0d] border border-[#1d1d1d] p-3">
               <div className="text-xs text-white font-semibold">{entry.admin_action}</div>
               <div className="text-[11px] text-[#666] mt-1">
-                {entry.target_table} · {entry.target_id}
+                {entry.target_table} - {entry.target_id}
               </div>
               <div className="text-[10px] text-[#444] mt-1">{formatDate(entry.created_at)}</div>
             </div>
@@ -2069,7 +2069,7 @@ function DetailModalView({
           <div className="space-y-2">
             <InfoPill label="Total Catalog" value={String(analytics.totalItems)} />
             {beats.slice(0, 25).map((beat) => (
-              <InfoPill key={beat.id} label={beat.title} value={`${beat.hidden ? 'Hidden' : 'Visible'} · ${beat.release_download ? 'Released' : 'Locked'}`} />
+              <InfoPill key={beat.id} label={beat.title} value={`${beat.hidden ? 'Hidden' : 'Visible'} - ${beat.release_download ? 'Released' : 'Locked'}`} />
             ))}
           </div>
         )}
@@ -2077,7 +2077,7 @@ function DetailModalView({
         {modal === 'tapes' && (
           <div className="space-y-2">
             {tapes.slice(0, 25).map((tape) => (
-              <InfoPill key={tape.id} label={tape.title} value={`${tape.hidden ? 'Hidden' : 'Visible'} · ${formatMoney(tape.price)}`} />
+              <InfoPill key={tape.id} label={tape.title} value={`${tape.hidden ? 'Hidden' : 'Visible'} - ${formatMoney(tape.price)}`} />
             ))}
           </div>
         )}
@@ -2095,7 +2095,7 @@ function DetailModalView({
             <InfoPill label="Revenue" value={formatMoney(analytics.revenue)} />
             <InfoPill label="Pending Orders" value={String(analytics.pendingOrders)} />
             {orders.slice(0, 25).map((order) => (
-              <InfoPill key={order.id} label={order.beat_name} value={`${order.status} · ${order.release_download ? 'Released' : 'Locked'}`} />
+              <InfoPill key={order.id} label={order.beat_name} value={`${order.status} - ${order.release_download ? 'Released' : 'Locked'}`} />
             ))}
           </div>
         )}
@@ -2104,7 +2104,7 @@ function DetailModalView({
           <div className="space-y-2">
             <InfoPill label="Pending Submissions" value={String(analytics.pendingSubmissions)} />
             {submissions.slice(0, 25).map((submission) => (
-              <InfoPill key={submission.id} label={submission.song_title} value={`${submission.status} · ${submission.buyer_name}`} />
+              <InfoPill key={submission.id} label={submission.song_title} value={`${submission.status} - ${submission.buyer_name}`} />
             ))}
           </div>
         )}

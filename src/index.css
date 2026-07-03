@@ -35,7 +35,7 @@ body {
   font-size: 112%;
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -43,11 +43,11 @@ body {
 }
 
 .font-display {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Urbanist', sans-serif;
 }
 
 .font-heading {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Urbanist', sans-serif;
 }
 
 /* Scrollbar */
@@ -140,9 +140,9 @@ body {
 .btn-gold {
   background: linear-gradient(135deg, #f5c518, #c9a200);
   color: #000;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Urbanist', sans-serif;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
