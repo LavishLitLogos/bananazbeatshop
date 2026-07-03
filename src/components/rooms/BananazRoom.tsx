@@ -697,7 +697,7 @@ function RoomTile({
       </div>
 
       <div className="p-3">
-        <div className="font-display text-[12px] font-900 uppercase text-white truncate">
+        <div className="font-display text-[12px] font-800 text-white truncate">
           {item.title}
         </div>
         <div className="mt-1 text-[10px] text-[#777] line-clamp-2 min-h-[28px]">
@@ -708,7 +708,7 @@ function RoomTile({
           {item.mediaType === 'image' && <ImageIcon size={12} />}
           {item.mediaType === 'video' && <Video size={12} />}
           {item.mediaType === 'file' && <Download size={12} />}
-          <span className="truncate uppercase">{item.mediaType}</span>
+          <span className="truncate">{item.mediaType}</span>
         </div>
       </div>
     </>

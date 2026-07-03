@@ -177,8 +177,8 @@ export function FreeDLsRoom() {
                 )}
 
                 <div className="absolute top-2 left-2">
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500 text-black uppercase">
-                    FREE
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500 text-black tracking-[0.04em]">
+                    Free
                   </span>
                 </div>
 

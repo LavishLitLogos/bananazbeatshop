@@ -210,13 +210,13 @@ export function CreditsRoom() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
 
                   <div className="absolute top-2 right-2 flex gap-1">
-                    <span className="rounded-full bg-black/70 border border-white/10 px-1.5 py-0.5 text-[9px] text-[#f5c518] font-bold uppercase">
+                    <span className="rounded-full bg-black/70 border border-white/10 px-1.5 py-0.5 text-[9px] text-[#f5c518] font-bold tracking-[0.04em]">
                       Credit
                     </span>
                   </div>
 
                   <div className="absolute inset-x-2 bottom-2">
-                    <div className="font-display font-900 text-[11px] text-white uppercase leading-tight line-clamp-2">
+                    <div className="font-display font-800 text-[11px] text-white leading-tight line-clamp-2">
                       {song.title}
                     </div>
 

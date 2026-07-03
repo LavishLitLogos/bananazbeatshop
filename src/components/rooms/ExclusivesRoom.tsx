@@ -247,7 +247,7 @@ export function ExclusivesRoom() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
 
-                  <span className="absolute top-2 left-2 rounded-full bg-[#f5c518] text-black px-1.5 py-0.5 text-[9px] font-black uppercase">
+                  <span className="absolute top-2 left-2 rounded-full bg-[#f5c518] text-black px-1.5 py-0.5 text-[9px] font-black tracking-[0.04em]">
                     Exclusive
                   </span>
 

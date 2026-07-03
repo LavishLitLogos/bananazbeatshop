@@ -66,6 +66,10 @@ function mergeChannels(buffer: AudioBuffer) {
   return merged;
 }
 
+function dbToGain(db: number) {
+  return Math.pow(10, db / 20);
+}
+
 export async function renderTaggedAudio(
   source: File | string,
   tagFile: File,
@@ -100,8 +104,37 @@ export async function renderTaggedAudio(
       .map((placement) => Math.max(0, placement))
       .forEach((placement) => {
         const tagNode = offlineContext.createBufferSource();
+        const tagGain = offlineContext.createGain();
+        const dryGain = offlineContext.createGain();
+        const wetGain = offlineContext.createGain();
+        const delayA = offlineContext.createDelay(1.5);
+        const delayB = offlineContext.createDelay(1.5);
+        const feedbackA = offlineContext.createGain();
+        const feedbackB = offlineContext.createGain();
+
         tagNode.buffer = tagBuffer;
-        tagNode.connect(offlineContext.destination);
+        tagGain.gain.value = dbToGain(2);
+        dryGain.gain.value = 0.85;
+        wetGain.gain.value = 0.15;
+        delayA.delayTime.value = 0.18;
+        delayB.delayTime.value = 0.31;
+        feedbackA.gain.value = 0.28;
+        feedbackB.gain.value = 0.22;
+
+        tagNode.connect(tagGain);
+        tagGain.connect(dryGain);
+        tagGain.connect(wetGain);
+
+        dryGain.connect(offlineContext.destination);
+
+        wetGain.connect(delayA);
+        wetGain.connect(delayB);
+        delayA.connect(feedbackA);
+        feedbackA.connect(delayB);
+        delayB.connect(feedbackB);
+        feedbackB.connect(delayA);
+        delayA.connect(offlineContext.destination);
+        delayB.connect(offlineContext.destination);
         tagNode.start(placement);
       });
 

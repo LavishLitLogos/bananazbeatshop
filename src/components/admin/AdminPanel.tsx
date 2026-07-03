@@ -903,6 +903,7 @@ function BeatsTab({
 
       {beats.map((beat) => (
         <AdminCard key={beat.id} title={beat.title} subtitle={`${getBeatPriceLabel(beat)} · ${isBeatExclusive(beat) ? 'Exclusive' : isBeatFree(beat) ? 'Free DL' : 'Beat Lab'}`} image={beat.cover_art_url}>
+          <ToggleRow label="Exclusive" active={Boolean(beat.exclusive)} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { exclusive: !beat.exclusive })} />
           <ToggleRow label="Approved" active={beat.admin_approved !== false} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { admin_approved: beat.admin_approved === false })} />
           <ToggleRow label="Hidden" active={beat.hidden} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { hidden: !beat.hidden })} />
           <ToggleRow label="Sold" active={beat.sold} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { sold: !beat.sold })} />
@@ -968,8 +969,11 @@ function ProdByTab({
 
       {songs.map((song) => (
         <AdminCard key={song.id} title={song.title} subtitle={song.artist_name || 'Produced by ThisBeatIzBananaz'} image={song.cover_art_url}>
+          <ToggleRow label="Exclusive" active={Boolean(song.exclusive)} disabled={busyId === song.id} onClick={() => onUpdate(song, { exclusive: !song.exclusive, is_free: song.exclusive ? song.is_free : false, price: song.exclusive ? song.price : Number(song.price || 250) })} />
           <ToggleRow label="Approved" active={song.admin_approved !== false} disabled={busyId === song.id} onClick={() => onUpdate(song, { admin_approved: song.admin_approved === false })} />
           <ToggleRow label="Hidden" active={song.hidden} disabled={busyId === song.id} onClick={() => onUpdate(song, { hidden: !song.hidden })} />
+          <ToggleRow label="Sold" active={Boolean(song.sold)} disabled={busyId === song.id} onClick={() => onUpdate(song, { sold: !song.sold })} />
+          <ToggleRow label="Release Download" active={Boolean(song.release_download)} disabled={busyId === song.id} onClick={() => onUpdate(song, { release_download: !song.release_download })} />
           <ActionRow onDelete={() => onDelete(song)} />
         </AdminCard>
       ))}

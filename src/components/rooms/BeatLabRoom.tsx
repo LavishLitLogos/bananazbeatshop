@@ -628,26 +628,26 @@ function BeatCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/35" />
 
         <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#f5c518] text-black uppercase tracking-wide">
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#f5c518] text-black tracking-[0.04em]">
             {primaryTag}
           </span>
 
           {beat.sold && (
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-600 text-white uppercase tracking-wide flex items-center gap-0.5">
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-600 text-white tracking-[0.04em] flex items-center gap-0.5">
               <Lock size={7} />
-              SOLD
+              Sold
             </span>
           )}
 
           {downloadEnabled && (
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-green-500 text-black uppercase tracking-wide">
-              DL
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-green-500 text-black tracking-[0.04em]">
+              Dl
             </span>
           )}
 
           {isAdmin && beat.hidden && (
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#333] text-white uppercase tracking-wide">
-              HIDDEN
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#333] text-white tracking-[0.04em]">
+              Hidden
             </span>
           )}
         </div>
@@ -774,11 +774,11 @@ function BeatCard({
           )}
 
           {beat.sold ? (
-            <div className="flex-1 h-9 rounded-xl bg-[#171717] border border-[#222] text-[#444] text-[10px] font-bold text-center flex items-center justify-center uppercase tracking-[0.12em]">
+            <div className="flex-1 h-9 rounded-xl bg-[#171717] border border-[#222] text-[#444] text-[10px] font-bold text-center flex items-center justify-center tracking-[0.04em]">
               Sold
             </div>
           ) : isBeatFree(beat) ? (
-            <div className="flex-1 h-9 rounded-xl bg-green-900/20 border border-green-700/30 text-green-400 text-[10px] font-bold text-center flex items-center justify-center uppercase tracking-[0.08em]">
+            <div className="flex-1 h-9 rounded-xl bg-green-900/20 border border-green-700/30 text-green-400 text-[10px] font-bold text-center flex items-center justify-center tracking-[0.04em]">
               {getBeatPriceLabel(beat)}
             </div>
           ) : (

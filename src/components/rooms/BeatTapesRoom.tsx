@@ -533,12 +533,12 @@ function TapeCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-display font-900 text-white uppercase truncate leading-tight">
+              <div className="font-display font-800 text-white truncate leading-tight">
                 {tape.title}
               </div>
 
               <div className="text-[10px] text-[#777] mt-1 flex flex-wrap gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-[#f5c518] text-black font-bold uppercase">
+                <span className="px-1.5 py-0.5 rounded bg-[#f5c518] text-black font-bold tracking-[0.04em]">
                   {type}
                 </span>
 
