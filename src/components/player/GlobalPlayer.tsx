@@ -180,7 +180,7 @@ export function GlobalPlayer() {
         >
           <div className="w-full max-w-md rounded-[2rem] bg-[#0d0d0d] border border-[#f5c518]/20 shadow-[0_0_50px_rgba(245,197,24,0.12)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-              <div className="text-[10px] font-display font-900 uppercase tracking-[0.25em] text-[#f5c518]">
+              <div className="text-[10px] font-display font-800 tracking-[0.14em] text-[#f5c518]">
                 Global Player
               </div>
 
@@ -219,7 +219,7 @@ export function GlobalPlayer() {
                 <div className="flex items-center justify-between text-[11px] text-[#777] mt-2">
                   <span>{queueLabel}</span>
                   {previewOnly && (
-                    <span className="text-[#f5c518] uppercase tracking-widest">
+                    <span className="text-[#f5c518] tracking-[0.08em]">
                       Preview Mode
                     </span>
                   )}
@@ -276,7 +276,7 @@ export function GlobalPlayer() {
               <div className={`grid gap-2 mt-5 ${canPurchaseBeat ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <button
                   onClick={stop}
-                  className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
+                  className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-[0.04em]"
                 >
                   <Square size={14} fill="currentColor" />
                   Stop
@@ -286,7 +286,7 @@ export function GlobalPlayer() {
                   <>
                     <button
                       onClick={handleBuy}
-                      className="h-11 rounded-2xl bg-[#f5c518] text-black hover:bg-[#ffdf4d] transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
+                      className="h-11 rounded-2xl bg-[#f5c518] text-black hover:bg-[#ffdf4d] transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-[0.04em]"
                     >
                       <ShoppingBag size={14} />
                       Buy
@@ -294,7 +294,7 @@ export function GlobalPlayer() {
 
                     <button
                       onClick={handleAddToBeatBox}
-                      className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest"
+                      className="h-11 rounded-2xl bg-[#141414] border border-white/5 text-[#aaa] hover:text-white hover:border-[#f5c518]/25 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-[0.04em]"
                     >
                       <ShoppingBag size={14} />
                       Box
@@ -347,7 +347,7 @@ export function GlobalPlayer() {
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[#8c8c8c] mt-1 leading-tight">
               <span className="break-words whitespace-normal text-[#d6d6d6]">{artistLine}</span>
-              <span className="text-[#444]">•</span>
+              <span className="text-[#444]">ï¿½</span>
               <span className="text-[#f5c518]">{queueLabel}</span>
             </div>
 
@@ -407,7 +407,7 @@ export function GlobalPlayer() {
             {canPurchaseBeat && (
               <button
                 onClick={handleBuy}
-                className="h-10 px-3 rounded-2xl bg-[#171717] text-[#f5c518] hover:text-black hover:bg-[#f5c518] transition-all flex items-center justify-center text-[10px] font-bold uppercase tracking-widest"
+                className="h-10 px-3 rounded-2xl bg-[#171717] text-[#f5c518] hover:text-black hover:bg-[#f5c518] transition-all flex items-center justify-center text-[10px] font-semibold tracking-[0.04em]"
                 aria-label="Buy current beat"
               >
                 Buy

@@ -394,7 +394,7 @@ export function HomeRoom() {
 
         <button
           onClick={() => setCurrentRoom('beatlab')}
-          className="mt-3 px-8 py-3 rounded-2xl text-sm font-display font-800 uppercase tracking-widest bg-[#141414] border border-[#f5c518]/25 text-[#f5c518] hover:bg-[#f5c518]/10 transition-all flex items-center gap-2"
+          className="mt-3 px-8 py-3 rounded-2xl text-sm font-display font-700 tracking-[0.04em] bg-[#141414] border border-[#f5c518]/25 text-[#f5c518] hover:bg-[#f5c518]/10 transition-all flex items-center gap-2"
         >
           Browse Beats
           <ArrowRight size={16} />
@@ -414,7 +414,7 @@ export function HomeRoom() {
         <div className="section-shell p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
-              <h2 className="font-display text-xl font-900 text-white uppercase tracking-[0.08em]">
+              <h2 className="font-display text-xl font-800 text-white tracking-[0.02em]">
                 Latest Drops
               </h2>
               <p className="text-sm text-[#8d8d8d]">Fresh drops from the lab, ready to run.</p>
@@ -422,7 +422,7 @@ export function HomeRoom() {
 
             <button
               onClick={() => setCurrentRoom('beatlab')}
-              className="premium-action text-xs text-[#f5c518] font-bold uppercase tracking-[0.22em]"
+              className="premium-action text-xs text-[#f5c518] font-semibold tracking-[0.06em]"
             >
               View All
             </button>
@@ -466,7 +466,7 @@ export function HomeRoom() {
 
                     <div className="flex items-center justify-between gap-3 mt-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.22em] text-[#686868] truncate">
+                        <div className="text-[11px] tracking-[0.04em] text-[#686868] truncate">
                           Latest Drop
                         </div>
                         <div className={`font-display text-lg font-900 leading-none mt-1 ${isBeatFree(beat) ? 'text-green-400' : 'text-[#f5c518]'}`}>
@@ -492,7 +492,7 @@ export function HomeRoom() {
         <div className="section-shell p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-display text-lg font-900 text-white uppercase tracking-wide">
+              <h2 className="font-display text-lg font-800 text-white tracking-[0.02em]">
                 Exclusives
               </h2>
               <p className="text-xs text-[#777]">Premium records and requests.</p>
@@ -500,7 +500,7 @@ export function HomeRoom() {
 
             <button
               onClick={() => setCurrentRoom('exclusives')}
-              className="premium-action text-xs text-[#f5c518] font-bold uppercase tracking-widest"
+              className="premium-action text-xs text-[#f5c518] font-semibold tracking-[0.06em]"
             >
               View All
             </button>
@@ -523,7 +523,7 @@ export function HomeRoom() {
                       />
                     </div>
 
-                    <div className="font-display text-[11px] font-800 text-white uppercase truncate leading-tight">
+                    <div className="font-display text-[11px] font-700 text-white truncate leading-tight">
                       {song.title}
                     </div>
 
@@ -556,7 +556,7 @@ export function HomeRoom() {
             >
               <img src={room.icon} alt="" className="w-8 h-8 object-contain" />
 
-              <span className="font-display font-700 text-[8px] text-white uppercase tracking-wide text-center leading-tight mt-1 px-1">
+              <span className="font-display font-700 text-[8px] text-white tracking-[0.03em] text-center leading-tight mt-1 px-1">
                 {room.label}
               </span>
             </button>
@@ -570,7 +570,7 @@ export function HomeRoom() {
             >
               <img src={FLAME_ICON} alt="" className="w-8 h-8 object-contain" />
 
-              <span className="font-display font-700 text-[8px] text-[#f5c518] uppercase tracking-wide text-center leading-tight mt-1 px-1">
+              <span className="font-display font-700 text-[8px] text-[#f5c518] tracking-[0.03em] text-center leading-tight mt-1 px-1">
                 Studio
               </span>
             </button>

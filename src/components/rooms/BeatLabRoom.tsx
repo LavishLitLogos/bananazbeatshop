@@ -343,7 +343,7 @@ export function BeatLabRoom() {
             </button>
 
             <div className="min-w-0">
-              <h1 className="font-display font-900 text-lg uppercase tracking-wide text-white leading-none truncate">
+              <h1 className="font-display font-800 text-lg tracking-[0.02em] text-white leading-none truncate">
                 Beats Lab
               </h1>
 
@@ -707,7 +707,7 @@ function BeatCard({
       </div>
 
       <div className="p-2 bg-[#0f0f0f]">
-        <div className="font-display font-900 text-[13px] text-white truncate leading-tight uppercase tracking-[0.02em]">
+        <div className="font-display font-800 text-[13px] text-white truncate leading-tight tracking-[0.01em]">
           {beat.title}
         </div>
 

@@ -176,7 +176,7 @@ export function ExclusivesRoom() {
             </button>
 
             <div className="min-w-0">
-              <h1 className="font-display font-900 text-2xl uppercase tracking-wide text-white leading-none">
+              <h1 className="font-display font-800 text-2xl tracking-[0.02em] text-white leading-none">
                 Exclusives
               </h1>
               <p className="text-sm text-[#777] mt-1 truncate">
@@ -199,7 +199,7 @@ export function ExclusivesRoom() {
         <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-5 text-center">
           <img src={MAIN_LOGO} alt="" className="w-20 h-20 object-contain mx-auto mb-3 opacity-80" />
 
-          <div className="font-display font-900 text-2xl uppercase text-[#f5c518]">
+          <div className="font-display font-800 text-2xl text-[#f5c518]">
             Exclusive Songs
           </div>
 
@@ -219,7 +219,7 @@ export function ExclusivesRoom() {
           </div>
         ) : visibleSongs.length === 0 ? (
           <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-6 text-center">
-            <div className="font-display font-900 text-xl uppercase text-white">
+            <div className="font-display font-800 text-xl text-white">
               No Exclusives Yet
             </div>
             <p className="text-sm text-[#777] mt-2">
@@ -252,7 +252,7 @@ export function ExclusivesRoom() {
                   </span>
 
                   <div className="absolute inset-x-2 bottom-2">
-                    <div className="font-display font-900 text-[11px] text-white uppercase leading-tight line-clamp-2">
+                    <div className="font-display font-800 text-[11px] text-white leading-tight line-clamp-2">
                       {song.title}
                     </div>
 

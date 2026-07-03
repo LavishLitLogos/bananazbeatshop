@@ -337,7 +337,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
         <div className="p-5 sm:p-6 space-y-5 w-full max-w-full overflow-x-hidden">
           <div className="flex justify-between items-start gap-3 min-w-0">
             <div className="flex-1 min-w-0">
-              <h2 className="font-display font-900 text-xl uppercase tracking-wider text-white leading-tight break-words">
+              <h2 className="font-display font-800 text-xl tracking-[0.02em] text-white leading-tight break-words">
                 {beat.title}
               </h2>
 
