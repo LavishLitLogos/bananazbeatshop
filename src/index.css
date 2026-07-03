@@ -407,11 +407,11 @@ body {
 }
 
 .latest-drop-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: clamp(1.15rem, 2vw, 1.55rem);
-  font-weight: 900;
-  line-height: 0.95;
-  text-transform: uppercase;
+  font-family: 'Urbanist', sans-serif;
+  font-size: clamp(1.02rem, 1.7vw, 1.28rem);
+  font-weight: 800;
+  line-height: 1.02;
+  text-transform: none;
   letter-spacing: 0;
   color: #fff;
   text-shadow: 0 4px 14px rgba(0,0,0,0.45);
