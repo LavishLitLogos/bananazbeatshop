@@ -365,6 +365,39 @@ body {
   backdrop-filter: blur(20px);
 }
 
+.player-title-window {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  min-height: 16px;
+}
+
+.player-title-window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(8,8,8,0.96) 0%, rgba(8,8,8,0) 8%, rgba(8,8,8,0) 92%, rgba(8,8,8,0.96) 100%);
+}
+
+.player-title-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5rem;
+  min-width: max-content;
+  animation: player-title-marquee 16s linear infinite;
+}
+
+.player-title-track span {
+  display: inline-block;
+}
+
+@keyframes player-title-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 1.25rem)); }
+}
+
 .section-shell {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.025), transparent 24%),

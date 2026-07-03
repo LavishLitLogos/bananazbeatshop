@@ -319,11 +319,11 @@ export function GlobalPlayer() {
           />
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-3">
+        <div className="flex items-center gap-1.5 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-3">
           <button
             onClick={prev}
             disabled={!hasPrev}
-            className="w-10 h-10 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center flex-shrink-0"
+            className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center flex-shrink-0 sm:w-10 sm:h-10"
             aria-label="Previous in queue"
           >
             <SkipBack size={15} />
@@ -331,7 +331,7 @@ export function GlobalPlayer() {
 
           <button
             onClick={openBeatDetail}
-            className="w-14 h-14 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+            className="w-12 h-12 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-14 sm:h-14"
             aria-label="Open beat detail"
           >
             <img src={cover} alt={title} className="w-full h-full object-cover" />
@@ -339,23 +339,29 @@ export function GlobalPlayer() {
 
           <button
             onClick={openBeatDetail}
-            className="flex-1 min-w-0 text-left pr-1"
+            className="flex-1 min-w-0 text-left pr-0.5"
           >
-            <div className="font-display font-900 text-[15px] sm:text-base text-white leading-[1.1] break-words whitespace-normal">
-              {title}
+            <div className="player-title-window">
+              <div
+                className="player-title-track font-display font-800 text-[13px] sm:text-[15px] text-white leading-none"
+                title={title}
+              >
+                <span>{title}</span>
+                <span aria-hidden="true">{title}</span>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#8c8c8c] mt-1 leading-tight">
-              <span className="break-words whitespace-normal text-[#d6d6d6]">{artistLine}</span>
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-[#8c8c8c] mt-1 leading-tight min-w-0 overflow-hidden">
+              <span className="truncate text-[#d6d6d6]">{artistLine}</span>
               <span className="rounded-full border border-[#2a2a2a] bg-[#131313] px-2 py-0.5 text-[10px] text-[#f5c518]">
                 {queueLabel}
               </span>
             </div>
 
-            <div className="text-[11px] text-[#666] mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <div className="text-[10px] sm:text-[11px] text-[#666] mt-1 flex items-center gap-2 min-w-0 overflow-hidden">
               {formatTime(currentTime)} / {displayDuration ? formatTime(displayDuration) : '--:--'}
               {beatItem && (
-                <span className="text-[#f5c518]">{getBeatPriceLabel(beatItem)}</span>
+                <span className="text-[#f5c518] truncate">{getBeatPriceLabel(beatItem)}</span>
               )}
             </div>
           </button>
@@ -375,10 +381,10 @@ export function GlobalPlayer() {
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-center">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={toggle}
-              className="w-11 h-11 rounded-2xl bg-[#f5c518] text-black flex items-center justify-center hover:bg-[#ffdf4d] transition-all shadow-[0_0_22px_rgba(245,197,24,0.28)]"
+              className="w-10 h-10 rounded-2xl bg-[#f5c518] text-black flex items-center justify-center hover:bg-[#ffdf4d] transition-all shadow-[0_0_22px_rgba(245,197,24,0.28)] sm:w-11 sm:h-11"
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? (
@@ -391,7 +397,7 @@ export function GlobalPlayer() {
             <button
               onClick={next}
               disabled={!hasNext}
-              className="w-10 h-10 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center sm:w-10 sm:h-10"
               aria-label="Next in queue"
             >
               <SkipForward size={15} />
@@ -399,7 +405,7 @@ export function GlobalPlayer() {
 
             <button
               onClick={stop}
-              className="w-10 h-10 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center sm:w-10 sm:h-10"
               aria-label="Stop player"
             >
               <Square size={14} fill="currentColor" />
@@ -408,7 +414,7 @@ export function GlobalPlayer() {
             {canPurchaseBeat && (
               <button
                 onClick={handleBuy}
-                className="h-10 px-3 rounded-2xl bg-[#171717] text-[#f5c518] hover:text-black hover:bg-[#f5c518] transition-all flex items-center justify-center text-[10px] font-semibold tracking-[0.04em]"
+                className="h-9 px-2.5 rounded-2xl bg-[#171717] text-[#f5c518] hover:text-black hover:bg-[#f5c518] transition-all flex items-center justify-center text-[10px] font-semibold tracking-[0.02em] sm:h-10 sm:px-3"
                 aria-label="Buy current beat"
               >
                 Buy
@@ -418,7 +424,7 @@ export function GlobalPlayer() {
             <button
               onClick={handleAddToBeatBox}
               disabled={!canPurchaseBeat}
-              className="w-10 h-10 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center sm:w-10 sm:h-10"
               aria-label="Add current beat to Beat Box"
             >
               <ShoppingBag size={13} />
@@ -426,7 +432,7 @@ export function GlobalPlayer() {
 
             <button
               onClick={closePlayer}
-              className="w-10 h-10 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] transition-all flex items-center justify-center sm:w-10 sm:h-10"
               aria-label="Close player"
             >
               <X size={15} />
