@@ -319,69 +319,71 @@ export function GlobalPlayer() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-3">
-          <button
-            onClick={prev}
-            disabled={!hasPrev}
-            className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center flex-shrink-0 sm:w-10 sm:h-10"
-            aria-label="Previous in queue"
-          >
-            <SkipBack size={15} />
-          </button>
-
+        <div className="px-2.5 py-2.5 sm:px-3 sm:py-3">
           <button
             onClick={openBeatDetail}
-            className="w-12 h-12 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-14 sm:h-14"
-            aria-label="Open beat detail"
+            className="w-full min-w-0 text-left"
           >
-            <img src={cover} alt={title} className="w-full h-full object-cover" />
-          </button>
-
-          <button
-            onClick={openBeatDetail}
-            className="flex-1 min-w-0 text-left pr-0.5"
-          >
-            <div className="player-title-window">
-              <div
-                className="player-title-track font-display font-800 text-[13px] sm:text-[15px] text-white leading-none"
-                title={title}
-              >
-                <span>{title}</span>
-                <span aria-hidden="true">{title}</span>
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-14 sm:h-14">
+                <img src={cover} alt={title} className="w-full h-full object-cover" />
               </div>
-            </div>
 
-            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-[#8c8c8c] mt-1 leading-tight min-w-0 overflow-hidden">
-              <span className="truncate text-[#d6d6d6]">{artistLine}</span>
-              <span className="rounded-full border border-[#2a2a2a] bg-[#131313] px-2 py-0.5 text-[10px] text-[#f5c518]">
-                {queueLabel}
-              </span>
-            </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="player-title-window">
+                  <div
+                    className="player-title-track font-display font-800 text-[13px] sm:text-[15px] text-white leading-none"
+                    title={title}
+                  >
+                    <span>{title}</span>
+                    <span aria-hidden="true">{title}</span>
+                  </div>
+                </div>
 
-            <div className="text-[10px] sm:text-[11px] text-[#666] mt-1 flex items-center gap-2 min-w-0 overflow-hidden">
-              {formatTime(currentTime)} / {displayDuration ? formatTime(displayDuration) : '--:--'}
-              {beatItem && (
-                <span className="text-[#f5c518] truncate">{getBeatPriceLabel(beatItem)}</span>
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-[#8c8c8c] mt-1 leading-tight min-w-0 overflow-hidden">
+                  <span className="truncate text-[#d6d6d6]">{artistLine}</span>
+                  <span className="rounded-full border border-[#2a2a2a] bg-[#131313] px-2 py-0.5 text-[10px] text-[#f5c518] flex-shrink-0">
+                    {queueLabel}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-[#666] mt-1 min-w-0 overflow-hidden">
+                  <span className="flex-shrink-0">
+                    {formatTime(currentTime)} / {displayDuration ? formatTime(displayDuration) : '--:--'}
+                  </span>
+                  {beatItem && (
+                    <span className="text-[#f5c518] truncate">{getBeatPriceLabel(beatItem)}</span>
+                  )}
+                </div>
+              </div>
+
+              {isPlaying && (
+                <div className="hidden xs:flex items-end gap-[2px] h-5 flex-shrink-0 self-center">
+                  {[0, 1, 2, 3, 4].map((index) => (
+                    <div
+                      key={index}
+                      className="waveform-bar w-[3px]"
+                      style={{
+                        animationDelay: `${index * 0.12}s`,
+                        height: '100%',
+                      }}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           </button>
 
-          {isPlaying && (
-            <div className="hidden xs:flex items-end gap-[2px] h-5 flex-shrink-0">
-              {[0, 1, 2, 3, 4].map((index) => (
-                <div
-                  key={index}
-                  className="waveform-bar w-[3px]"
-                  style={{
-                    animationDelay: `${index * 0.12}s`,
-                    height: '100%',
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <div className="mt-2 flex items-center justify-between gap-1">
+            <button
+              onClick={prev}
+              disabled={!hasPrev}
+              className="w-9 h-9 rounded-2xl bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center flex-shrink-0 sm:w-10 sm:h-10"
+              aria-label="Previous in queue"
+            >
+              <SkipBack size={15} />
+            </button>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={toggle}
               className="w-10 h-10 rounded-2xl bg-[#f5c518] text-black flex items-center justify-center hover:bg-[#ffdf4d] transition-all shadow-[0_0_22px_rgba(245,197,24,0.28)] sm:w-11 sm:h-11"
