@@ -380,7 +380,7 @@ export function BeatTapesRoom() {
                   className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   <Plus size={14} />
-                  New
+                  + Upload
                 </button>
               </>
             )}
@@ -420,7 +420,7 @@ export function BeatTapesRoom() {
                 }}
                 className="btn-gold mt-4 px-6 py-3 rounded-xl text-sm"
               >
-                Create Beat Tape
+                + Upload
               </button>
             )}
           </div>

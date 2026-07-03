@@ -312,7 +312,7 @@ export function ProdByRoom() {
                   className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   <Plus size={14} />
-                  Song
+                  + Upload
                 </button>
               </>
             )}
@@ -352,7 +352,7 @@ export function ProdByRoom() {
                 }}
                 className="btn-gold mt-4 px-6 py-3 rounded-xl text-sm"
               >
-                Add Song
+                + Upload
               </button>
             )}
           </div>
@@ -594,7 +594,7 @@ function SongCard({
   );
 }
 
-function SongUploadModal({
+export function SongUploadModal({
   song,
   onClose,
   onSave,

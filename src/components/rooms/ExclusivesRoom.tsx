@@ -4,6 +4,7 @@ import {
   Lock,
   Pause,
   Play,
+  Plus,
   Share2,
   ShoppingBag,
   X,
@@ -15,6 +16,7 @@ import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE } from '../../utils/branding';
 import { getBeatPriceLabel } from '../../utils/beatAccess';
 import { isExclusiveSong } from '../../utils/exclusiveSongs';
+import { SongUploadModal } from './ProdByRoom';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -36,12 +38,13 @@ function getSongUrl(song: ExclusiveSong) {
 }
 
 export function ExclusivesRoom() {
-  const { goBack, addToast } = useApp();
+  const { goBack, addToast, isAdmin } = useApp();
   const audio = useAudio();
 
   const [songs, setSongs] = useState<ExclusiveSong[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSong, setSelectedSong] = useState<ExclusiveSong | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   const fetchSongs = useCallback(async () => {
     setLoading(true);
@@ -185,13 +188,25 @@ export function ExclusivesRoom() {
             </div>
           </div>
 
-          <button
-            onClick={() => handleShare()}
-            className="p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518]"
-            aria-label="Share exclusives"
-          >
-            <Share2 size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleShare()}
+              className="p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518]"
+              aria-label="Share exclusives"
+            >
+              <Share2 size={16} />
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => setShowUpload(true)}
+                className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                + Upload
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -402,6 +417,17 @@ export function ExclusivesRoom() {
             </div>
           </div>
         </div>
+      )}
+
+      {showUpload && (
+        <SongUploadModal
+          song={null}
+          onClose={() => setShowUpload(false)}
+          onSave={async () => {
+            setShowUpload(false);
+            await fetchSongs();
+          }}
+        />
       )}
     </div>
   );

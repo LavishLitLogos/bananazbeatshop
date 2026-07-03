@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   Pause,
   Play,
+  Plus,
   Share2,
   X,
 } from 'lucide-react';
@@ -11,6 +12,7 @@ import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
 import { BRAND_NAME, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
+import { SongUploadModal } from './ProdByRoom';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -28,12 +30,13 @@ function getCreditUrl(song: CreditSong) {
 }
 
 export function CreditsRoom() {
-  const { goBack, addToast } = useApp();
+  const { goBack, addToast, isAdmin } = useApp();
   const audio = useAudio();
 
   const [credits, setCredits] = useState<CreditSong[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCredit, setSelectedCredit] = useState<CreditSong | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   const fetchCredits = useCallback(async () => {
     setLoading(true);
@@ -139,13 +142,25 @@ export function CreditsRoom() {
             </div>
           </div>
 
-          <button
-            onClick={() => handleShare()}
-            className="p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518] flex-shrink-0"
-            aria-label="Share credits room"
-          >
-            <Share2 size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleShare()}
+              className="p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518] flex-shrink-0"
+              aria-label="Share credits room"
+            >
+              <Share2 size={16} />
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => setShowUpload(true)}
+                className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                + Upload
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -344,6 +359,17 @@ export function CreditsRoom() {
             </div>
           </div>
         </div>
+      )}
+
+      {showUpload && (
+        <SongUploadModal
+          song={null}
+          onClose={() => setShowUpload(false)}
+          onSave={async () => {
+            setShowUpload(false);
+            await fetchCredits();
+          }}
+        />
       )}
     </div>
   );
