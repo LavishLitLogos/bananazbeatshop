@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+ï»¿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   Download,
@@ -24,6 +24,7 @@ import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BuyModal } from '../modals/BuyModal';
 import { ShareButton } from '../ui/ShareButton';
 import { canBuyBeat, canDownloadBeat, getBeatPriceLabel, isBeatFree, isBeatInBeatLab, triggerBeatDownload } from '../../utils/beatAccess';
+import { BRAND_NAME } from '../../utils/branding';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PLAY_ICON = '/assets/icons/play-icon.png';
@@ -347,7 +348,7 @@ export function BeatLabRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {filteredBeats.length} beats Â· Database live
+                {filteredBeats.length} beats - Database live
               </p>
             </div>
           </div>
@@ -355,8 +356,8 @@ export function BeatLabRoom() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <ShareButton
               small
-              title="ThisBeatIzBananaz™ Beats Lab"
-              text="Browse fresh cookups from ThisBeatIzBananaz™."
+              title={`${BRAND_NAME} Beats Lab`}
+              text={`Browse fresh cookups from ${BRAND_NAME}.`}
             />
 
             <button
@@ -655,7 +656,7 @@ function BeatCard({
           <ShareButton
             small
             title={beat.title}
-            text={`Check out "${beat.title}" by ThisBeatIzBananaz™™`}
+            text={`Check out "${beat.title}" by ${BRAND_NAME}`}
             className="bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518]"
           />
         </div>
@@ -809,4 +810,5 @@ function BeatCard({
     </div>
   );
 }
+
 

@@ -1,4 +1,4 @@
-export type BananazThemeName =
+﻿export type BananazThemeName =
   | "gold"
   | "lava"
   | "neonGreen"
@@ -209,7 +209,7 @@ export const defaultLicensingInfo: LicensingInfoState = {
   freeDownloads:
     'Free DL\'s - Usable for all purposes. Must credit "prod. by ThisBeatIzBananaz" with song title/displays. Not available for submissions.',
   producedBy:
-    "Produced by - All songs are considered demos, even though they are singles. They showcase song-writing, production, arrangements & concepts of the producer. All rights reserved, Rawheart Waymakerz Music Group© 2025. Owned by ThisBeatIzBananaz™",
+    'Produced by - All songs are considered demos, even though they are singles. They showcase song-writing, production, arrangements & concepts of the producer. All rights reserved, Rawheart Waymakerz Music Group© 2025. Owned by ThisBeatIzBananaz™',
 };
 
 export const defaultContactInfo: ContactInfoState = {
@@ -579,3 +579,4 @@ export const appStorage = {
     return writeAppState(JSON.parse(rawState));
   },
 };
+

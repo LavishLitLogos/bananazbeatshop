@@ -549,7 +549,7 @@ export function ProfileRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {profile.displayName || 'ThisBeatIzBananaz'} Â· Producer profile
+                {profile.displayName || 'ThisBeatIzBananaz'} · Profile
               </p>
             </div>
           </div>
@@ -813,7 +813,7 @@ export function ProfileRoom() {
                     Partners
                   </h3>
                   <p className="text-[10px] text-[#666]">
-                    Unlimited partner links Â· 4x4 preview grid
+                    Tap in with partner links and featured looks.
                   </p>
                 </div>
 
@@ -839,7 +839,7 @@ export function ProfileRoom() {
               </div>
 
               {partnersOpen && (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {partners.map((partner) => (
                     <div
                       key={partner.id}
@@ -881,7 +881,7 @@ export function ProfileRoom() {
                   ))}
 
                   {partners.length === 0 && (
-                    <div className="col-span-4 text-center text-xs text-[#555] py-10">
+                    <div className="col-span-3 text-center text-xs text-[#555] py-10">
                       No partner links yet.
                     </div>
                   )}
@@ -928,7 +928,7 @@ export function ProfileRoom() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {media.map((item) => (
                   <div
                     key={item.id}
@@ -1000,7 +1000,7 @@ export function ProfileRoom() {
                 ))}
 
                 {media.length === 0 && (
-                  <div className="col-span-2 text-center text-xs text-[#555] py-10 rounded-2xl border border-dashed border-[#222]">
+                  <div className="col-span-3 text-center text-xs text-[#555] py-10 rounded-2xl border border-dashed border-[#222]">
                     No profile media yet.
                   </div>
                 )}
@@ -1012,5 +1012,6 @@ export function ProfileRoom() {
     </div>
   );
 }
+
 
 

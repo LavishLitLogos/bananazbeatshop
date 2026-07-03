@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+ï»¿import { useState, useEffect, useRef, useCallback } from 'react';
 import { Share2, Flame, Lock, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
+import { appStorage } from '../../services/appStorage';
 import type { Beat, ProdBySong, Room } from '../../types';
 import { BRAND_NAME } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
+import { FamzProfileModal } from '../modals/FamzProfileModal';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const FLAME_ICON = '/assets/images/glofirereact.png';
@@ -54,6 +56,8 @@ export function HomeRoom() {
   const [adminCode, setAdminCode] = useState('');
   const [hasExclusives, setHasExclusives] = useState(false);
   const [showWelcomeAdmin, setShowWelcomeAdmin] = useState(false);
+  const [showFamzModal, setShowFamzModal] = useState(false);
+  const [famzCount, setFamzCount] = useState(() => appStorage.getAdminSettings().famzCount);
   const pwaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchHomeData = useCallback(async () => {
@@ -90,6 +94,19 @@ export function HomeRoom() {
   useEffect(() => {
     fetchHomeData();
   }, [fetchHomeData]);
+
+  useEffect(() => {
+    const syncFamzCount = () => {
+      setFamzCount(appStorage.getAdminSettings().famzCount);
+    };
+
+    syncFamzCount();
+    window.addEventListener('bananaz-app-storage:update', syncFamzCount as EventListener);
+
+    return () => {
+      window.removeEventListener('bananaz-app-storage:update', syncFamzCount as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
@@ -235,7 +252,7 @@ export function HomeRoom() {
           <button onClick={() => setCurrentRoom('home')} title="Go to home" aria-label="Go to home" className="flex-shrink-0">
             <img
               src={MAIN_LOGO}
-              alt="ThisBeatIzBananaz™"
+              alt="ThisBeatIzBananaz"
               className="w-9 h-9 object-contain"
             />
           </button>
@@ -300,7 +317,7 @@ export function HomeRoom() {
           <span className="text-xs text-[#aaa]">
             {iosPWA
               ? 'Tap Share -> Add to Home Screen'
-              : 'Install ThisBeatIzBananaz™ App'}
+              : 'Install ThisBeatIzBananaz App'}
           </span>
 
           {!iosPWA && deferredPrompt && (
@@ -332,7 +349,7 @@ export function HomeRoom() {
         >
           <img
             src={MAIN_LOGO}
-            alt="ThisBeatIzBananaz™"
+            alt="ThisBeatIzBananaz"
             className="w-52 h-52 object-contain drop-shadow-2xl"
             style={{
               filter: 'drop-shadow(0 0 15px rgba(245,197,24,0.3))',
@@ -340,8 +357,11 @@ export function HomeRoom() {
           />
         </button>
 
-        <div className="font-display text-4xl font-900 text-white tracking-tight text-center leading-tight mt-1 glow-gold-text">
-          {BRAND_NAME}
+        <div className="mt-1 flex items-center gap-2 text-center">
+          <img src={FLAME_ICON} alt="" className="w-7 h-7 object-contain" />
+          <div className="font-display text-4xl font-900 text-white tracking-tight leading-tight glow-gold-text">
+            {BRAND_NAME}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-[#f5c518] text-sm font-medium mt-2 text-center">
@@ -517,7 +537,7 @@ export function HomeRoom() {
       </div>
 
       <div className="px-3 pb-6 relative z-10">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {ROOMS.filter((room) => room.id !== 'exclusives' || hasExclusives).map((room) => (
             <button
               key={room.id}
@@ -550,12 +570,12 @@ export function HomeRoom() {
 
       <div className="flex justify-center pb-4 relative z-10">
         <button
-          onClick={() => setCurrentRoom('profile')}
+          onClick={() => setShowFamzModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#111] border border-[#1e1e1e] hover:border-[#f5c518]/20 transition-all"
         >
           <img src={MAIN_LOGO} alt="" className="w-4 h-4 object-contain" />
           <span className="text-xs text-[#888]">FAMZ</span>
-          <span className="text-xs font-bold text-[#f5c518]">11,603</span>
+          <span className="text-xs font-bold text-[#f5c518]">{famzCount.toLocaleString()}</span>
         </button>
       </div>
 
@@ -563,7 +583,7 @@ export function HomeRoom() {
         <div className="fixed inset-0 z-[99999] bg-black/90 flex flex-col items-center justify-center gap-6 animate-[fadeIn_0.3s_ease]">
           <img
             src={MAIN_LOGO}
-            alt="ThisBeatIzBananaz™"
+            alt="ThisBeatIzBananaz"
             className="w-44 h-44 object-contain animate-logo-burst"
             style={{ filter: 'drop-shadow(0 0 40px #f5c518)' }}
           />
@@ -626,7 +646,10 @@ export function HomeRoom() {
           </div>
         </div>
       )}
+
+      {showFamzModal && <FamzProfileModal onClose={() => setShowFamzModal(false)} />}
     </div>
   );
 }
+
 

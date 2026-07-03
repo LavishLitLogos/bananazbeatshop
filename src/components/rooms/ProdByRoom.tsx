@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   Download,
@@ -25,7 +25,7 @@ import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PROD_BY_ICON = '/assets/icons/skip-icon.png';
 
-// ProdBySong now has all required fields on the base interface — no local extension needed
+// ProdBySong now has all required fields on the base interface â€” no local extension needed
 type ProducedSong = ProdBySong;
 
 function getSongCover(song: ProducedSong) {
@@ -39,7 +39,7 @@ function getSongUrl(song: ProducedSong) {
 function getSongRights(song: ProducedSong) {
   return (
     song.rights_text ||
-    'Produced by ThisBeatIzBananaz�. Rawheart Waymakerz Music Group�.'
+    PRODUCED_BY_INFO_DEFAULT
   );
 }
 
@@ -137,7 +137,7 @@ export function ProdByRoom() {
 
     const shareData = {
       title: song.title,
-      text: `Listen to "${song.title}" produced by ThisBeatIzBananaz�.`,
+      text: `Listen to "${song.title}" produced by ${BRAND_NAME}.`,
       url,
     };
 
@@ -277,7 +277,7 @@ export function ProdByRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {visibleSongs.length} songs · Complete records
+                {visibleSongs.length} songs - Complete records
               </p>
             </div>
           </div>
@@ -340,7 +340,7 @@ export function ProdByRoom() {
             </div>
 
             <div className="text-xs text-[#555] mt-1">
-              Complete songs produced by ThisBeatIzBananaz� will appear here.
+              Complete songs produced by {BRAND_NAME} will appear here.
             </div>
 
             {isAdmin && (
@@ -467,7 +467,7 @@ function SongCard({
               </div>
 
               <div className="text-[10px] text-[#777] mt-1">
-                Song · Produced by ThisBeatIzBananaz� · {priceLabel}
+                Song · Produced by {BRAND_NAME} · {priceLabel}
               </div>
             </div>
 
@@ -910,5 +910,6 @@ function ToggleBox({
     </button>
   );
 }
+
 
 

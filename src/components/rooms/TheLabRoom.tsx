@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+ï»¿import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Bell,
   ChevronLeft,
@@ -19,7 +19,7 @@ import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { LabMessage, LabTopic } from '../../types';
 
-const ADMIN_NAME = 'ThisBeatIzBananazâ„¢';
+const ADMIN_NAME = 'ThisBeatIzBananaz';
 const FAMZ_NAME = 'FAMZ';
 const ADMIN_AVATAR = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const FAMZ_ICON = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -295,7 +295,7 @@ export function TheLabRoom() {
                 The Lab
               </h1>
               <p className="text-[10px] text-[#555] mt-0.5">
-                drops · previews · updates
+                drops - previews - updates
               </p>
             </div>
           </div>
@@ -440,7 +440,7 @@ export function TheLabRoom() {
           <div className="px-4 py-3 text-center">
             <div className="rounded-2xl bg-[#111] border border-[#1e1e1e] px-4 py-3">
               <div className="text-xs text-[#f5c518] uppercase tracking-[0.18em] font-bold">
-                Updates from ThisBeatIzBananaz™
+                Updates from ThisBeatIzBananaz
               </div>
               <div className="text-[11px] text-[#666] mt-1">
                 Tap in, react, and catch what's cooking.
@@ -507,7 +507,7 @@ function MessageBubble({
             {visibleName}
           </span>
           <span className="text-[10px] text-[#444]">{safeTime(msg.created_at)}</span>
-          {msg.is_automated && <span className="text-[9px] text-[#333]">Â· live</span>}
+          {msg.is_automated && <span className="text-[9px] text-[#333]">- live</span>}
         </div>
 
         {replyMsg && (
@@ -599,6 +599,7 @@ function MessageBubble({
     </div>
   );
 }
+
 
 
 

@@ -119,11 +119,11 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     }
 
     if (allBeats.length > 0 && currentIndex >= 0) {
-      audio.playQueue(allBeats, currentIndex, true);
+      audio.playQueue(allBeats, currentIndex, false);
       return;
     }
 
-    audio.play(beat, true);
+    audio.play(beat, false);
   };
 
   const handlePrev = () => {
@@ -137,7 +137,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     const prevBeat = allBeats[currentIndex - 1];
     if (!prevBeat?.audio_file_url) return;
 
-    audio.playQueue(allBeats, currentIndex - 1, true);
+    audio.playQueue(allBeats, currentIndex - 1, false);
   };
 
   const handleNext = () => {
@@ -151,7 +151,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     const nextBeat = allBeats[currentIndex + 1];
     if (!nextBeat?.audio_file_url) return;
 
-    audio.playQueue(allBeats, currentIndex + 1, true);
+    audio.playQueue(allBeats, currentIndex + 1, false);
   };
 
   const handleDownload = () => {
@@ -577,3 +577,4 @@ function MusicIcon() {
     />
   );
 }
+

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+ï»¿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   Pause,
@@ -10,7 +10,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
-import { PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
+import { BRAND_NAME, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
@@ -82,15 +82,15 @@ export function CreditsRoom() {
 
   const handleShare = async (song?: CreditSong) => {
     const url = song ? getCreditUrl(song) : window.location.href;
-    const title = song ? `${song.title} Â· Produced by ThisBeatIzBananaz™` : 'ThisBeatIzBananaz™ Credits';
+    const title = song ? `${song.title} Â· Produced by ${BRAND_NAME}` : `${BRAND_NAME} Credits`;
 
     try {
       if (navigator.share) {
         await navigator.share({
           title,
           text: song
-            ? `Listen to "${song.title}" by ${song.artist_name || 'Artist TBA'} â€” produced by ThisBeatIzBananaz™.`
-            : 'Production credits and artist showcases from ThisBeatIzBananaz™.',
+            ? `Listen to "${song.title}" by ${song.artist_name || 'Artist TBA'} - produced by ${BRAND_NAME}.`
+            : `Production credits and artist showcases from ${BRAND_NAME}.`,
           url,
         });
         return;
@@ -154,7 +154,7 @@ export function CreditsRoom() {
           </div>
 
           <p className="text-base text-[#bdbdbd] mt-3 leading-relaxed max-w-md mx-auto">
-            Songs produced by ThisBeatIzBananaz™ for artists around the world.
+            Songs produced by {BRAND_NAME} for artists around the world.
           </p>
 
           <p className="text-sm text-[#777] mt-2 max-w-sm mx-auto">
@@ -163,7 +163,7 @@ export function CreditsRoom() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
@@ -181,7 +181,7 @@ export function CreditsRoom() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {visibleCredits.map((song) => {
               const isCurrent = audio.currentBeat?.id === song.id;
               const isPlaying = isCurrent && audio.isPlaying;
@@ -340,4 +340,5 @@ export function CreditsRoom() {
     </div>
   );
 }
+
 

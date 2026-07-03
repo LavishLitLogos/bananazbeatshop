@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronLeft,
@@ -346,7 +346,7 @@ export function BeatTapesRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {visibleTapes.length} tapes · singles, albums, compilations
+                {visibleTapes.length} tapes - singles, albums, compilations
               </p>
             </div>
           </div>
@@ -409,7 +409,7 @@ export function BeatTapesRoom() {
             </div>
 
             <div className="text-xs text-[#555] mt-1">
-              Upload singles, albums, or compilations.
+              Curated tape drops will land here.
             </div>
 
             {isAdmin && (
@@ -926,7 +926,7 @@ function TapeUploadModal({
               {tape ? 'Edit Beat Tape' : 'New Beat Tape'}
             </div>
             <div className="text-[10px] text-[#666]">
-              {MIN_TRACKS}-{MAX_TRACKS} tracks � users get 45-second previews
+              {MIN_TRACKS}-{MAX_TRACKS} tracks · users get 45-second previews
             </div>
           </div>
 
@@ -1207,4 +1207,5 @@ function ToggleBox({
     </button>
   );
 }
+
 

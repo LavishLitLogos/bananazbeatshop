@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   Lock,
@@ -111,8 +111,8 @@ export function ExclusivesRoom() {
         await navigator.share({
           title: song ? song.title : `${BRAND_NAME} Exclusives`,
           text: song
-            ? `Listen to "${song.title}" — written, arranged, and produced by ThisBeatIzBananaz�.`
-            : 'Exclusive songs written, arranged, and produced by ThisBeatIzBananaz�.',
+            ? `Listen to "${song.title}" - written, arranged, and produced by ${BRAND_NAME}.`
+            : `Exclusive songs written, arranged, and produced by ${BRAND_NAME}.`,
           url,
         });
         return;
@@ -196,12 +196,12 @@ export function ExclusivesRoom() {
           </div>
 
           <p className="text-base text-[#bdbdbd] mt-3 leading-relaxed max-w-md mx-auto">
-            Full records built from the beat up — written, arranged, produced, and curated in-house.
+            Full records built from the beat up â€” written, arranged, produced, and curated in-house.
           </p>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
@@ -219,7 +219,7 @@ export function ExclusivesRoom() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {visibleSongs.map((song) => {
               const isCurrent = audio.currentBeat?.id === song.id;
               const isPlaying = isCurrent && audio.isPlaying;
@@ -385,4 +385,5 @@ export function ExclusivesRoom() {
     </div>
   );
 }
+
 
