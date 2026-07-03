@@ -5,6 +5,7 @@ import { HomeRoom } from './components/rooms/HomeRoom';
 import { BeatLabRoom } from './components/rooms/BeatLabRoom';
 import { FreeDLsRoom } from './components/rooms/FreeDLsRoom';
 import { BeatTapesRoom } from './components/rooms/BeatTapesRoom';
+import { BananazRoom } from './components/rooms/BananazRoom';
 import { ProdByRoom } from './components/rooms/ProdByRoom';
 import { CreditsRoom } from './components/rooms/CreditsRoom';
 import { TheLabRoom } from './components/rooms/TheLabRoom';
@@ -32,6 +33,7 @@ function App() {
     if (currentRoom === 'beatlab') return <BeatLabRoom />;
     if (currentRoom === 'freedls') return <FreeDLsRoom />;
     if (currentRoom === 'beattapes') return <BeatTapesRoom />;
+    if (currentRoom === 'bananazroom') return <BananazRoom />;
     if (currentRoom === 'prodby') return <ProdByRoom />;
     if (currentRoom === 'credits') return <CreditsRoom />;
     if (currentRoom === 'thelab') return <TheLabRoom />;

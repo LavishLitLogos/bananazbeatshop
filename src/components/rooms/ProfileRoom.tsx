@@ -151,7 +151,7 @@ function SocialLink({ platform, handle }: { platform: keyof SocialHandles; handl
   );
 }
 
-export function ProfileRoom() {
+export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
   const {
     goBack,
     setCurrentRoom,
@@ -523,7 +523,8 @@ export function ProfileRoom() {
   };
 
   return (
-    <div id="profile" className="min-h-screen">
+    <div id="profile" className={embedded ? '' : 'min-h-screen'}>
+      {!embedded && (
       <div className="sticky top-0 z-40 bg-[#080808]/92 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe">
         <div className="flex items-center justify-between px-3 py-3 gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -585,8 +586,9 @@ export function ProfileRoom() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="px-3 py-4 pb-32 space-y-4">
+      <div className={`px-3 py-4 ${embedded ? 'pb-6' : 'pb-32'} space-y-4`}>
         {loading ? (
           <div className="rounded-3xl bg-[#111] border border-[#1e1e1e] h-80 animate-pulse" />
         ) : (

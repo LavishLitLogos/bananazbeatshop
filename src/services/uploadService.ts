@@ -7,7 +7,7 @@ export type UploadResult = {
   storagePath: string;
 };
 
-type UploadBucket = 'beat-audio' | 'cover-art' | 'profile-media' | 'submissions' | 'videos';
+type UploadBucket = 'beat-audio' | 'cover-art' | 'profile-media' | 'submissions' | 'videos' | 'bananaz-room';
 
 function cleanFileName(name: string) {
   const extension = name.split('.').pop()?.toLowerCase() || 'file';
@@ -72,4 +72,16 @@ export function uploadProfileMedia(file: File): Promise<UploadResult> {
 
 export function uploadSubmissionFile(file: File): Promise<UploadResult> {
   return uploadToBucket(file, 'submissions');
+}
+
+export function uploadBananazRoomFile(file: File): Promise<UploadResult> {
+  const folder = file.type.startsWith('audio/')
+    ? 'audio'
+    : file.type.startsWith('image/')
+      ? 'images'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : 'files';
+
+  return uploadToBucket(file, 'bananaz-room', folder);
 }

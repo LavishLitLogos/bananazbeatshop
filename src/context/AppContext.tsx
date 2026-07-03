@@ -34,6 +34,7 @@ interface RoomCountMap {
   beatlab: number;
   freedls: number;
   beattapes: number;
+  bananazroom: number;
   prodby: number;
   exclusives: number;
   credits: number;
@@ -107,6 +108,7 @@ const DEFAULT_ROOM_COUNTS: RoomCountMap = {
   beatlab: 0,
   freedls: 0,
   beattapes: 0,
+  bananazroom: 0,
   prodby: 0,
   exclusives: 0,
   credits: 0,

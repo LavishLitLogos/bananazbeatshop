@@ -321,6 +321,15 @@ export function GlobalPlayer() {
 
         <div className="flex items-center gap-3 px-3 py-2.5">
           <button
+            onClick={prev}
+            disabled={!hasPrev}
+            className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center flex-shrink-0"
+            aria-label="Previous in queue"
+          >
+            <SkipBack size={13} />
+          </button>
+
+          <button
             onClick={openBeatDetail}
             className="w-12 h-12 rounded-2xl overflow-hidden bg-black border border-[#262626] flex-shrink-0 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
             aria-label="Open beat detail"
@@ -376,6 +385,15 @@ export function GlobalPlayer() {
               ) : (
                 <Play size={16} fill="black" className="ml-0.5" />
               )}
+            </button>
+
+            <button
+              onClick={next}
+              disabled={!hasNext}
+              className="w-8 h-8 rounded-full bg-[#171717] text-[#888] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              aria-label="Next in queue"
+            >
+              <SkipForward size={13} />
             </button>
 
             <button

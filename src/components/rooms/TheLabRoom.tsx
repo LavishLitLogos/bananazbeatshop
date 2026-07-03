@@ -18,6 +18,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import type { LabMessage, LabTopic } from '../../types';
+import { ProfileRoom } from './ProfileRoom';
 
 const ADMIN_NAME = 'ThisBeatIzBananaz';
 const FAMZ_NAME = 'FAMZ';
@@ -25,6 +26,7 @@ const ADMIN_AVATAR = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const FAMZ_ICON = '/assets/images/thisbeatizbananazmainlogo copy.png';
 
 const TOPICS: { id: LabTopic; label: string; icon: ReactNode }[] = [
+  { id: 'profile', label: 'Profile', icon: <ShieldCheck size={18} /> },
   { id: 'chat', label: 'Chat', icon: <MessageCircle size={18} /> },
   { id: 'drops', label: 'Drops', icon: <Zap size={18} /> },
   { id: 'exclusives', label: 'Exclusives', icon: <Flame size={18} /> },
@@ -65,7 +67,7 @@ function getMessagePreview(message?: LabMessage) {
 
 export function TheLabRoom() {
   const { goBack, isAdmin, addToast } = useApp();
-  const [activeTopic, setActiveTopic] = useState<LabTopic>('chat');
+  const [activeTopic, setActiveTopic] = useState<LabTopic>('profile');
   const [messages, setMessages] = useState<LabMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -81,6 +83,12 @@ export function TheLabRoom() {
   }, [activeTopic]);
 
   const fetchMessages = useCallback(async () => {
+    if (activeTopic === 'profile') {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } = await supabase
@@ -102,6 +110,10 @@ export function TheLabRoom() {
   }, [activeTopic, addToast]);
 
   useEffect(() => {
+    if (activeTopic === 'profile') {
+      return;
+    }
+
     fetchMessages();
 
     const channel = supabase
@@ -323,7 +335,11 @@ export function TheLabRoom() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-40">
+      <div className={`flex-1 overflow-y-auto ${activeTopic === 'profile' ? '' : 'px-4 py-4 space-y-3 pb-40'}`}>
+        {activeTopic === 'profile' ? (
+          <ProfileRoom embedded />
+        ) : (
+          <>
         <div className="rounded-2xl border border-[#1d1d1d] bg-[#101010] p-4">
           <div className="flex items-center gap-2 text-[#f5c518] text-xs font-bold uppercase tracking-[0.2em]">
             <ShieldCheck size={14} />
@@ -368,8 +384,11 @@ export function TheLabRoom() {
             />
           ))
         )}
+          </>
+        )}
       </div>
 
+      {activeTopic !== 'profile' && (
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-[#1a1a1a] pb-safe">
         {replyTo && isAdmin && (
           <div className="flex items-center justify-between px-4 pt-2 pb-1">
@@ -449,6 +468,7 @@ export function TheLabRoom() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

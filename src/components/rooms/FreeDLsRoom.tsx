@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
@@ -11,7 +11,7 @@ import { isBeatInFreeDLs, triggerBeatDownload } from '../../utils/beatAccess';
 
 export function FreeDLsRoom() {
   const { goBack, isAdmin, addToast } = useApp();
-  const { currentBeat, isPlaying, play, pause, resume } = useAudio();
+  const { currentBeat, isPlaying, play, playQueue, pause, resume } = useAudio();
   const [beats, setBeats] = useState<Beat[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -19,6 +19,11 @@ export function FreeDLsRoom() {
   const [selectedBeat, setSelectedBeat] = useState<Beat | null>(null);
   const [showFreeDLMsg, setShowFreeDLMsg] = useState(false);
   const [pendingBeat, setPendingBeat] = useState<Beat | null>(null);
+
+  const playableBeats = useMemo(
+    () => beats.filter((beat) => beat.audio_file_url),
+    [beats]
+  );
 
   const fetchBeats = useCallback(async () => {
     setLoading(true);
@@ -52,6 +57,13 @@ export function FreeDLsRoom() {
         resume();
       }
 
+      return;
+    }
+
+    const index = playableBeats.findIndex((item) => item.id === beat.id);
+
+    if (index >= 0) {
+      playQueue(playableBeats, index, false);
       return;
     }
 

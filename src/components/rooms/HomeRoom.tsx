@@ -29,7 +29,7 @@ const ROOMS: { id: Room; label: string; icon: string }[] = [
   { id: 'supamaster', label: 'SupaMaster', icon: '/assets/images/glofirereact.png' },
   { id: 'thelab', label: 'The Lab', icon: '/assets/images/glofirereact.png' },
   { id: 'exclusives', label: 'Exclusives', icon: '/assets/icons/play-icon.png' },
-  { id: 'profile', label: 'Profile', icon: MAIN_LOGO },
+  { id: 'bananazroom', label: 'Bananaz Room', icon: MAIN_LOGO },
 ];
 
 export function HomeRoom() {
@@ -197,6 +197,14 @@ export function HomeRoom() {
   const handlePlayExclusive = (song: ProdBySong) => {
     if (!song.audio_file_url) {
       setCurrentRoom('exclusives');
+      return;
+    }
+
+    const playable = exclusiveSongs.filter((item) => item.audio_file_url);
+    const startIndex = playable.findIndex((item) => item.id === song.id);
+
+    if (startIndex >= 0) {
+      audio.playQueue(playable, startIndex, false);
       return;
     }
 

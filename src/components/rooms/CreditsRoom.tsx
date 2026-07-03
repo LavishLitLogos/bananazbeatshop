@@ -77,6 +77,14 @@ export function CreditsRoom() {
       return;
     }
 
+    const playableSongs = visibleCredits.filter((item) => item.audio_file_url);
+    const index = playableSongs.findIndex((item) => item.id === song.id);
+
+    if (index >= 0) {
+      audio.playQueue(playableSongs, index, false);
+      return;
+    }
+
     audio.play(song, false);
   };
 

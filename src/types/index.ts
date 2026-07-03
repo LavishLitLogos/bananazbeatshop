@@ -171,6 +171,7 @@ export type Room =
   | 'beatlab'
   | 'freedls'
   | 'beattapes'
+  | 'bananazroom'
   | 'prodby'
   | 'credits'
   | 'thelab'
@@ -182,6 +183,7 @@ export type Room =
   | 'exclusives';
 
 export type LabTopic =
+  | 'profile'
   | 'chat'
   | 'drops'
   | 'exclusives'

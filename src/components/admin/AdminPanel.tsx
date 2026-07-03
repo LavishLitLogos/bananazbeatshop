@@ -159,6 +159,7 @@ export function AdminPanel() {
       beatlab: loadedBeats.filter((beat) => isBeatInBeatLab(beat, true)).length,
       freedls: loadedBeats.filter((beat) => isBeatInFreeDLs(beat, true)).length,
       beattapes: loadedTapes.filter((tape) => !tape.hidden).length,
+      bananazroom: 0,
       prodby: loadedSongs.filter((song) => !song.hidden).length,
       exclusives: loadedBeats.filter((beat) => isBeatExclusive(beat) && isBeatVisibleToBuyer(beat)).length,
       credits: 0,
