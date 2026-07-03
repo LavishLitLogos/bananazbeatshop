@@ -232,7 +232,7 @@ export function BananazRoom() {
         .eq('id', settingsId);
 
       if (error) {
-        addToast('Layout save failed. Using fallback.', 'error');
+        addToast('Layout save failed. Keeping your local room setup.', 'error');
         setUsingFallback(true);
       }
       return;
@@ -245,7 +245,7 @@ export function BananazRoom() {
       .single();
 
     if (error) {
-      addToast('Layout save failed. Using fallback.', 'error');
+      addToast('Layout save failed. Keeping your local room setup.', 'error');
       setUsingFallback(true);
       return;
     }
@@ -386,7 +386,7 @@ export function BananazRoom() {
       .eq('id', draggedItem.id);
 
     if (error) {
-      addToast('Position save failed. Using fallback.', 'error');
+      addToast('Position save failed. Keeping your local room setup.', 'error');
       setUsingFallback(true);
     }
   };
@@ -419,7 +419,7 @@ export function BananazRoom() {
       .single();
 
     if (error) {
-      addToast('Room save failed. Switched to fallback.', 'error');
+      addToast('Room save failed. Saved locally for now.', 'error');
       setUsingFallback(true);
       const fallbackItem: BananazRoomItem = {
         ...draft,

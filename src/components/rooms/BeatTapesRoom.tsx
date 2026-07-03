@@ -21,14 +21,15 @@ import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { BeatTape, BeatTapeTrack } from '../../types';
 import { BRAND_NAME } from '../../utils/branding';
+import { renderTaggedAudio } from '../../utils/audioTagger';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const BEAT_TAPES_ICON = '/assets/icons/beattapes.png';
 const MIN_TRACKS = 3;
-const MAX_TRACKS = 6;
-const PREVIEW_SECONDS = 45;
+const MAX_TRACKS = 12;
+const PREVIEW_SECONDS = 50;
 
 interface TapeWithTracks extends BeatTape {
   tracks: BeatTapeTrack[];
@@ -726,8 +727,42 @@ function TapeUploadModal({
   );
   const [saving, setSaving] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [tagEnabled, setTagEnabled] = useState(false);
+  const [tagFile, setTagFile] = useState<File | null>(null);
+  const [tagPreviewUrl, setTagPreviewUrl] = useState('');
+  const [tagPlacements, setTagPlacements] = useState('');
 
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!tagFile) {
+      setTagPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(tagFile);
+    setTagPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [tagFile]);
+
+  const parseTagPlacements = () =>
+    tagPlacements
+      .split(',')
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isFinite(value) && value >= 0);
+
+  const applyTagIfNeeded = async (file: File, fallbackTitle: string) => {
+    if (!tagEnabled || !tagFile) return file;
+
+    const placements = parseTagPlacements();
+
+    if (placements.length === 0) {
+      throw new Error('TAGNANAZ needs at least one placement time in seconds.');
+    }
+
+    return renderTaggedAudio(file, tagFile, placements, fallbackTitle || file.name);
+  };
 
   const handleCoverFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -760,7 +795,9 @@ function TapeUploadModal({
     );
 
     try {
-      const result = await uploadAudio(file);
+      const nextTitle = tracks[index]?.title || file.name.replace(/\.[^/.]+$/, '');
+      const preparedFile = await applyTagIfNeeded(file, nextTitle);
+      const result = await uploadAudio(preparedFile);
 
       setTracks((currentTracks) =>
         currentTracks.map((track, trackIndex) =>
@@ -926,7 +963,7 @@ function TapeUploadModal({
               {tape ? 'Edit Beat Tape' : 'New Beat Tape'}
             </div>
             <div className="text-[10px] text-[#666]">
-              {MIN_TRACKS}-{MAX_TRACKS} tracks · users get 45-second previews
+              {MIN_TRACKS}-{MAX_TRACKS} tracks · users get 50-second previews
             </div>
           </div>
 
@@ -1036,6 +1073,58 @@ function TapeUploadModal({
           </div>
 
           <div className="space-y-2">
+            <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm text-white">TAGNANAZ</div>
+                  <div className="text-[11px] text-[#666] mt-1">
+                    Tag tape tracks before upload and bake the drop points into the saved file.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setTagEnabled((current) => !current)}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-all ${
+                    tagEnabled ? 'bg-[#f5c518] text-black' : 'bg-[#111] border border-[#222] text-[#aaa]'
+                  }`}
+                >
+                  {tagEnabled ? 'On' : 'Off'}
+                </button>
+              </div>
+
+              {tagEnabled && (
+                <>
+                  <label className="rounded-xl border border-[#222] bg-black/40 p-3 cursor-pointer hover:border-[#f5c518]/35 block">
+                    <div className="text-sm text-white">Beat Tag Audio</div>
+                    <div className="text-[11px] text-[#666] mt-1 truncate">
+                      {tagFile?.name || 'Choose your beat tag MP3/WAV'}
+                    </div>
+                    <input
+                      className="hidden"
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav"
+                      onChange={(event) => setTagFile(event.target.files?.[0] || null)}
+                    />
+                  </label>
+
+                  <input
+                    className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
+                    value={tagPlacements}
+                    onChange={(event) => setTagPlacements(event.target.value)}
+                    placeholder="Tag placements in seconds, comma-separated. Example: 0, 18.5, 37"
+                  />
+
+                  {tagPreviewUrl && (
+                    <div className="rounded-xl border border-[#1e1e1e] bg-black/35 p-3">
+                      <div className="text-[11px] text-[#aaa] mb-2">Beat Tag Preview</div>
+                      <audio controls className="w-full" src={tagPreviewUrl} />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-display font-900 text-white uppercase tracking-wide text-sm">
@@ -1152,7 +1241,14 @@ function TapeUploadModal({
                   );
 
                   try {
-                    const uploadResults = await Promise.all(files.map((file) => uploadAudio(file)));
+                    const preparedFiles = await Promise.all(
+                      files.map((file) =>
+                        applyTagIfNeeded(file, file.name.replace(/\.[^/.]+$/, ''))
+                      )
+                    );
+                    const uploadResults = await Promise.all(
+                      preparedFiles.map((file) => uploadAudio(file))
+                    );
                     setTracks(
                       files.map((file, index) => ({
                         title: file.name.replace(/\.[^/.]+$/, ''),

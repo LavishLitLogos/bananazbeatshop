@@ -24,6 +24,7 @@ type SubmissionView = 'form' | 'success';
 type SubmissionForm = {
   buyer_name: string;
   buyer_email: string;
+  purchased_beat: string;
   song_title: string;
   notes: string;
   file: File | null;
@@ -32,6 +33,7 @@ type SubmissionForm = {
 const emptyForm: SubmissionForm = {
   buyer_name: '',
   buyer_email: '',
+  purchased_beat: '',
   song_title: '',
   notes: '',
   file: null,
@@ -166,6 +168,11 @@ export function SubmissionRoom() {
       return false;
     }
 
+    if (!form.purchased_beat.trim()) {
+      addToast('Purchased beat title is required.', 'error');
+      return false;
+    }
+
     if (!form.file) {
       addToast('Please attach your submission file.', 'error');
       return false;
@@ -180,17 +187,52 @@ export function SubmissionRoom() {
     setSubmitting(true);
 
     try {
-      const uploaded = await uploadSubmissionFile(form.file);
       const cleanName = form.buyer_name.trim();
       const cleanContact = form.buyer_email.trim();
+      const cleanBeatTitle = form.purchased_beat.trim();
       const cleanTitle = form.song_title.trim();
       const cleanNotes = form.notes.trim();
+
+      const { data: matchedBeat, error: beatError } = await supabase
+        .from('beats')
+        .select('id,title,is_free')
+        .ilike('title', cleanBeatTitle)
+        .limit(1)
+        .maybeSingle();
+
+      if (beatError) {
+        throw new Error('Could not verify the beat for this submission.');
+      }
+
+      if (!matchedBeat || matchedBeat.is_free) {
+        throw new Error('Submissions are only for purchased Beat Lab beats.');
+      }
+
+      const { data: matchedOrder, error: orderError } = await supabase
+        .from('orders')
+        .select('id,beat_id,buyer_email,status,payment_received')
+        .eq('buyer_email', cleanContact)
+        .eq('beat_id', matchedBeat.id)
+        .in('status', ['Sold', 'Released'])
+        .limit(1)
+        .maybeSingle();
+
+      if (orderError) {
+        throw new Error('Could not verify your purchase right now.');
+      }
+
+      if (!matchedOrder) {
+        throw new Error('Only purchased Beat Lab beats can be submitted here.');
+      }
+
+      const uploaded = await uploadSubmissionFile(form.file);
 
       const { data: inserted, error } = await supabase
         .from('submissions')
         .insert({
           buyer_name: cleanName,
           buyer_email: cleanContact,
+          beat_id: matchedBeat.id,
           song_title: cleanTitle,
           song_file_url: uploaded.url,
           song_file_path: uploaded.path,
@@ -205,6 +247,7 @@ export function SubmissionRoom() {
           metadata: {
             contact: cleanContact,
             notes: cleanNotes,
+            purchased_beat: cleanBeatTitle,
             original_file_name: form.file.name,
             file_type: form.file.type,
             file_size: form.file.size,
@@ -566,7 +609,7 @@ export function SubmissionRoom() {
                 </h2>
 
                 <p className="text-[#888] text-sm leading-relaxed">
-                  Upload your finished cookup for review.
+                  Upload your finished record from a purchased Beat Lab beat for review.
                 </p>
               </div>
 
@@ -583,6 +626,13 @@ export function SubmissionRoom() {
                   placeholder="Email / contact"
                   value={form.buyer_email}
                   onChange={(event) => updateForm('buyer_email', event.target.value)}
+                />
+
+                <input
+                  className="input-dark w-full px-4 py-3 text-sm"
+                  placeholder="Purchased beat title"
+                  value={form.purchased_beat}
+                  onChange={(event) => updateForm('purchased_beat', event.target.value)}
                 />
 
                 <input

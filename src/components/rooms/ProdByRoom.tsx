@@ -20,6 +20,7 @@ import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 import { isExclusiveSong, isSongMarkedExclusiveByText } from '../../utils/exclusiveSongs';
+import { renderTaggedAudio } from '../../utils/audioTagger';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -622,22 +623,74 @@ export function SongUploadModal({
   const [saving, setSaving] = useState(false);
   const [audioUploading, setAudioUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const [tagEnabled, setTagEnabled] = useState(false);
+  const [tagFile, setTagFile] = useState<File | null>(null);
+  const [tagPreviewUrl, setTagPreviewUrl] = useState('');
+  const [tagPlacements, setTagPlacements] = useState('');
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!audioFile) {
+      setAudioPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(audioFile);
+    setAudioPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [audioFile]);
+
+  useEffect(() => {
+    if (!tagFile) {
+      setTagPreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(tagFile);
+    setTagPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [tagFile]);
 
   const handleAudioFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setAudioFile(file);
     setAudioUploading(true);
 
     try {
-      const result = await uploadAudio(file);
+      let uploadFile = file;
+
+      if (tagEnabled && tagFile) {
+        const placements = tagPlacements
+          .split(',')
+          .map((value) => Number(value.trim()))
+          .filter((value) => Number.isFinite(value) && value >= 0);
+
+        if (placements.length === 0) {
+          throw new Error('TAGNANAZ needs at least one placement time in seconds.');
+        }
+
+        uploadFile = await renderTaggedAudio(
+          file,
+          tagFile,
+          placements,
+          title.trim() || file.name
+        );
+        setAudioFile(uploadFile);
+      }
+
+      const result = await uploadAudio(uploadFile);
       setAudioUrl(result.url);
       addToast('Song audio uploaded.', 'success');
-    } catch {
-      addToast('Song audio upload failed. Paste a URL instead.', 'error');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Song audio upload failed. Paste a URL instead.', 'error');
     }
 
     setAudioUploading(false);
@@ -835,12 +888,71 @@ export function SongUploadModal({
             />
           </div>
 
+          {(audioFile || audioUrl) && (
+            <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3">
+              <div className="text-sm text-white">Audio Preview</div>
+              <audio controls className="mt-3 w-full" src={audioPreviewUrl || audioUrl} />
+            </div>
+          )}
+
           <input
             value={coverUrl}
             onChange={(event) => setCoverUrl(event.target.value)}
             placeholder="Song cover URL"
             className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
           />
+
+          <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm text-white">TAGNANAZ</div>
+                <div className="text-[11px] text-[#666] mt-1">
+                  Drop a tag on the song upload and bake it into the saved file.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setTagEnabled((current) => !current)}
+                className={`rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-all ${
+                  tagEnabled ? 'bg-[#f5c518] text-black' : 'bg-[#111] border border-[#222] text-[#aaa]'
+                }`}
+              >
+                {tagEnabled ? 'On' : 'Off'}
+              </button>
+            </div>
+
+            {tagEnabled && (
+              <>
+                <label className="rounded-xl border border-[#222] bg-black/40 p-3 cursor-pointer hover:border-[#f5c518]/35 block">
+                  <div className="text-sm text-white">Beat Tag Audio</div>
+                  <div className="text-[11px] text-[#666] mt-1 truncate">
+                    {tagFile?.name || 'Choose your beat tag MP3/WAV'}
+                  </div>
+                  <input
+                    className="hidden"
+                    type="file"
+                    accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav"
+                    onChange={(event) => setTagFile(event.target.files?.[0] || null)}
+                  />
+                </label>
+
+                <input
+                  className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
+                  value={tagPlacements}
+                  onChange={(event) => setTagPlacements(event.target.value)}
+                  placeholder="Tag placements in seconds, comma-separated. Example: 0, 18.5, 37"
+                />
+
+                {tagPreviewUrl && (
+                  <div className="rounded-xl border border-[#1e1e1e] bg-black/35 p-3">
+                    <div className="text-[11px] text-[#aaa] mb-2">Beat Tag Preview</div>
+                    <audio controls className="w-full" src={tagPreviewUrl} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           <input
             value={rightsText}
