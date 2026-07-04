@@ -33,6 +33,16 @@ const ROOMS: { id: Room; label: string; icon: string }[] = [
   { id: 'bananazroom', label: 'Bananaz Room', icon: MAIN_LOGO },
 ];
 
+type HomeTile = {
+  id: Room | 'admin-studio';
+  label: string;
+  icon: string;
+  targetRoom: Room;
+  accent?: 'gold';
+};
+
+type LinkDirection = 'left' | 'right' | 'up' | 'down';
+
 export function HomeRoom() {
   const {
     setCurrentRoom,
@@ -60,6 +70,29 @@ export function HomeRoom() {
   const [showFamzModal, setShowFamzModal] = useState(false);
   const [famzCount, setFamzCount] = useState(() => appStorage.getAdminSettings().famzCount);
   const pwaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const roomEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tileRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [linkingTileId, setLinkingTileId] = useState<string | null>(null);
+  const [linkDirection, setLinkDirection] = useState<LinkDirection>('right');
+  const homeTiles: HomeTile[] = [
+    ...ROOMS.filter((room) => room.id !== 'exclusives' || hasExclusives).map((room) => ({
+      id: room.id,
+      label: room.label,
+      icon: room.icon,
+      targetRoom: !isAdmin && room.id === 'prodby' ? 'credits' : room.id,
+    })),
+    ...(isAdmin
+      ? [
+          {
+            id: 'admin-studio' as const,
+            label: 'Studio',
+            icon: FLAME_ICON,
+            targetRoom: 'admin' as Room,
+            accent: 'gold' as const,
+          },
+        ]
+      : []),
+  ];
 
   const fetchHomeData = useCallback(async () => {
     const [beatsCountRes, latestDropsRes, exclusiveRes] = await Promise.all([
@@ -138,6 +171,14 @@ export function HomeRoom() {
 
       if (pwaTimerRef.current) {
         clearTimeout(pwaTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (roomEnterTimerRef.current) {
+        clearTimeout(roomEnterTimerRef.current);
       }
     };
   }, []);
@@ -253,6 +294,61 @@ export function HomeRoom() {
     } else {
       addToast(result.message, 'success');
     }
+  };
+
+  const getTileDirection = (tileId: string): LinkDirection => {
+    const clickedEl = tileRefs.current[tileId];
+    if (!clickedEl) return 'right';
+
+    const clickedRect = clickedEl.getBoundingClientRect();
+    const clickedCenterX = clickedRect.left + clickedRect.width / 2;
+    const clickedCenterY = clickedRect.top + clickedRect.height / 2;
+
+    let nearestDx = 0;
+    let nearestDy = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    let foundNeighbor = false;
+
+    homeTiles.forEach((tile) => {
+      if (tile.id === tileId) return;
+
+      const element = tileRefs.current[tile.id];
+      if (!element) return;
+
+      const rect = element.getBoundingClientRect();
+      const dx = rect.left + rect.width / 2 - clickedCenterX;
+      const dy = rect.top + rect.height / 2 - clickedCenterY;
+      const distance = Math.hypot(dx, dy);
+
+      if (!foundNeighbor || distance < nearestDistance) {
+        nearestDx = dx;
+        nearestDy = dy;
+        nearestDistance = distance;
+        foundNeighbor = true;
+      }
+    });
+
+    if (!foundNeighbor) return 'right';
+
+    if (Math.abs(nearestDx) >= Math.abs(nearestDy)) {
+      return nearestDx >= 0 ? 'right' : 'left';
+    }
+
+    return nearestDy >= 0 ? 'down' : 'up';
+  };
+
+  const handleRoomTileEnter = (tile: HomeTile) => {
+    if (roomEnterTimerRef.current) {
+      clearTimeout(roomEnterTimerRef.current);
+    }
+
+    const direction = getTileDirection(tile.id);
+    setLinkDirection(direction);
+    setLinkingTileId(tile.id);
+
+    roomEnterTimerRef.current = setTimeout(() => {
+      setCurrentRoom(tile.targetRoom);
+    }, 220);
   };
 
   return (
@@ -547,34 +643,39 @@ export function HomeRoom() {
       </div>
 
       <div className="px-3 pb-6 relative z-10">
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {ROOMS.filter((room) => room.id !== 'exclusives' || hasExclusives).map((room) => (
+        <div className="home-room-grid grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {homeTiles.map((tile, index) => (
             <button
-              key={room.id}
-              onClick={() => setCurrentRoom(!isAdmin && room.id === 'prodby' ? 'credits' : room.id)}
-              className="room-tile w-full aspect-square rounded-full"
+              key={tile.id}
+              ref={(element) => {
+                tileRefs.current[tile.id] = element;
+              }}
+              onClick={() => handleRoomTileEnter(tile)}
+              className={`room-tile room-puzzle-piece w-full aspect-square ${
+                linkingTileId === tile.id ? 'is-linking' : ''
+              } ${tile.accent === 'gold' ? 'room-puzzle-piece-gold' : ''}`}
+              data-link-direction={linkingTileId === tile.id ? linkDirection : undefined}
+              style={{ animationDelay: `${index * 42}ms` }}
             >
-              <img src={room.icon} alt="" className="w-8 h-8 object-contain" />
+              <span className="room-puzzle-tab room-puzzle-tab-top" aria-hidden="true" />
+              <span className="room-puzzle-tab room-puzzle-tab-right" aria-hidden="true" />
+              <span className="room-puzzle-notch room-puzzle-notch-left" aria-hidden="true" />
+              <span className="room-puzzle-notch room-puzzle-notch-bottom" aria-hidden="true" />
+              <span className="room-puzzle-shine" aria-hidden="true" />
 
-              <span className="font-display font-700 text-[8px] text-white tracking-[0.03em] text-center leading-tight mt-1 px-1">
-                {room.label}
+              <span className="room-puzzle-content">
+                <img src={tile.icon} alt="" className="w-8 h-8 object-contain" />
+
+                <span
+                  className={`font-display font-700 text-[9px] text-center leading-tight mt-1 px-1 ${
+                    tile.accent === 'gold' ? 'text-[#f5c518]' : 'text-white'
+                  }`}
+                >
+                  {tile.label}
+                </span>
               </span>
             </button>
           ))}
-
-          {isAdmin && (
-            <button
-              onClick={() => setCurrentRoom('admin')}
-              className="room-tile w-full aspect-square rounded-full"
-              style={{ borderColor: 'rgba(245,197,24,0.35)' }}
-            >
-              <img src={FLAME_ICON} alt="" className="w-8 h-8 object-contain" />
-
-              <span className="font-display font-700 text-[8px] text-[#f5c518] tracking-[0.03em] text-center leading-tight mt-1 px-1">
-                Studio
-              </span>
-            </button>
-          )}
         </div>
       </div>
 
