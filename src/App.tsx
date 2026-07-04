@@ -21,7 +21,7 @@ import { GlobalPlayer } from './components/player/GlobalPlayer';
 import { BeatBoxCart } from './components/modals/BeatBoxCart';
 import { ToastContainer } from './components/ui/Toast';
 
-const INDUSTRIAL_BG = '/assets/images/backgroundtexture.png';
+const INDUSTRIAL_BG = '/assets/backgroundtexture.png';
 
 function App() {
   const { currentRoom, cartOpen, isAdmin } = useApp();
