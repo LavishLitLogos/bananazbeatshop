@@ -242,7 +242,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
 
   return (
     <div className="modal-backdrop">
-      <div className="modal-box max-w-lg w-full p-5 space-y-4" onClick={(event) => event.stopPropagation()}>
+      <div className="modal-box cracked-shell-panel console-panel neon-frame glow-yellow cut-corner-card max-w-lg w-full p-5 space-y-4" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="font-display font-900 text-xl uppercase text-white">
@@ -255,7 +255,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+            className="hardware-button p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
             aria-label="Close upload modal"
           >
             <X size={18} />

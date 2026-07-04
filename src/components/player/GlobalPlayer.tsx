@@ -178,7 +178,7 @@ export function GlobalPlayer() {
           onTouchStart={handleExpandedTouchStart}
           onTouchEnd={handleExpandedTouchEnd}
         >
-          <div className="w-full max-w-md rounded-[2rem] bg-[#0d0d0d] border border-[#f5c518]/20 shadow-[0_0_50px_rgba(245,197,24,0.12)] overflow-hidden">
+          <div className="w-full max-w-md rounded-[2rem] cracked-shell-panel console-panel neon-frame glow-yellow bg-[#0d0d0d] border border-[#f5c518]/20 shadow-[0_0_50px_rgba(245,197,24,0.12)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
               <div className="text-[10px] font-display font-800 tracking-[0.14em] text-[#f5c518]">
                 Global Player
@@ -307,7 +307,7 @@ export function GlobalPlayer() {
         </div>
       )}
 
-      <div className="pointer-events-auto player-bar border-t border-[#f5c518]/15 bg-[#080808]/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(0,0,0,0.55)]">
+      <div className="pointer-events-auto player-bar bottom-console-nav border-t border-[#f5c518]/15 bg-[#080808]/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(0,0,0,0.55)]">
         <div
           className="h-[3px] bg-[#171717] cursor-pointer"
           onClick={openBeatDetail}

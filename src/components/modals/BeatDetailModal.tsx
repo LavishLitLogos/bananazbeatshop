@@ -287,7 +287,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div
-        className="modal-box beat-detail-modal w-[calc(100vw-24px)] max-w-md overflow-y-auto overflow-x-hidden"
+        className="modal-box beat-detail-modal cracked-shell-panel console-panel neon-frame glow-yellow cut-corner-card w-[calc(100vw-24px)] max-w-md overflow-y-auto overflow-x-hidden"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -295,13 +295,13 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
           {/* X CLOSE BUTTON — always visible, always functional */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full hover:bg-white/10 bg-black/70 border border-white/10 text-white transition-colors flex items-center justify-center"
+            className="hardware-button absolute top-3 right-3 z-20 w-9 h-9 rounded-full hover:bg-white/10 bg-black/70 border border-white/10 text-white transition-colors flex items-center justify-center"
             aria-label="Close beat detail"
           >
             <X size={18} />
           </button>
 
-          <div className="aspect-square bg-[#111] rounded-t-[22px] overflow-hidden">
+          <div className="aspect-square bg-[#111] rounded-t-[22px] overflow-hidden console-inset-panel">
             {beat.cover_art_url ? (
               <img src={beat.cover_art_url} alt={beat.title} className="w-full h-full object-contain" />
             ) : (
@@ -387,7 +387,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-4 rounded-[1.4rem] border border-white/5 bg-[#101010] p-3">
+          <div className="flex items-center justify-center gap-4 rounded-[1.4rem] border border-white/5 bg-[#101010] p-3 console-inset-panel">
             <button
               onClick={handlePrev}
               disabled={!hasPrev}
@@ -446,7 +446,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             {!downloadUnlocked && (
               <button
                 onClick={handleDownload}
-                className="flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#111] border border-[#222] text-[#666]"
+                className="flex-1 min-w-[130px] py-3 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#111] border border-[#222] text-[#666] hardware-button"
               >
                 <Lock size={16} />
                 Locked
@@ -556,7 +556,7 @@ function AdminToggle({ label, active, onClick }: { label: string; active: boolea
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-xl text-xs border transition-all ${
+      className={`px-3 py-2 rounded-xl text-xs border transition-all hardware-button ${
         active
           ? 'bg-[#f5c518]/10 text-[#f5c518] border-[#f5c518]/25'
           : 'bg-[#111] text-[#666] border-[#222]'

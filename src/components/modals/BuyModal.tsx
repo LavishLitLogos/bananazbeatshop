@@ -216,7 +216,7 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
       }}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="modal-box max-w-md w-full" onClick={(event) => event.stopPropagation()}>
+      <div className="modal-box cracked-shell-panel console-panel neon-frame glow-yellow cut-corner-card max-w-md w-full" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <div>
             <h2 className="font-display font-800 text-lg uppercase tracking-wider text-white">
@@ -228,7 +228,7 @@ export function BuyModal({ beat, onClose }: BuyModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full hover:bg-white/5 bg-white/[0.03] text-[#666] hover:text-white transition-colors flex items-center justify-center"
+            className="hardware-button w-9 h-9 rounded-full hover:bg-white/5 bg-white/[0.03] text-[#666] hover:text-white transition-colors flex items-center justify-center"
             aria-label="Close purchase modal"
           >
             <X size={18} />

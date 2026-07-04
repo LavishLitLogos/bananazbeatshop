@@ -322,13 +322,13 @@ export function BeatLabRoom() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="sticky top-0 z-40 bg-[#080808]/92 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe">
+    <div className="min-h-screen industrial-room-surface">
+      <div className="sticky top-0 z-40 bg-[#080808]/92 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe cracked-shell-panel console-panel mx-3 mt-3 rounded-[1.6rem]">
         <div className="flex items-center justify-between px-3 py-3 gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={goBack}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors flex-shrink-0"
+              className="hardware-button p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors flex-shrink-0"
               aria-label="Back"
             >
               <ChevronLeft size={20} />
@@ -362,7 +362,7 @@ export function BeatLabRoom() {
 
             <button
               onClick={() => setShowFilters((value) => !value)}
-              className={`p-2 rounded-xl border transition-all ${
+              className={`hardware-button p-2 rounded-xl border transition-all ${
                 showFilters
                   ? 'bg-[var(--bananaz-glow-soft)] border-[var(--bananaz-accent)] text-[var(--bananaz-accent)]'
                   : 'bg-[#111] border-[#1e1e1e] text-[#888]'
@@ -376,7 +376,7 @@ export function BeatLabRoom() {
               <>
                 <button
                   onClick={() => setAdminEditMode(!adminEditMode)}
-                  className={`p-2 rounded-xl border transition-all ${
+                  className={`hardware-button p-2 rounded-xl border transition-all ${
                     adminEditMode
                       ? 'bg-[#f5c518] border-[#f5c518] text-black'
                       : 'bg-[#111] border-[#1e1e1e] text-[#888]'
@@ -388,7 +388,7 @@ export function BeatLabRoom() {
 
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
-                  className={`p-2 rounded-xl border transition-all ${
+                  className={`hardware-button p-2 rounded-xl border transition-all ${
                     reorderMode
                       ? 'bg-[#f5c518] border-[#f5c518] text-black'
                       : 'bg-[#111] border-[#1e1e1e] text-[#888]'
@@ -415,7 +415,7 @@ export function BeatLabRoom() {
 
         {showFilters && (
           <div className="px-3 pb-3 space-y-3 border-t border-[#1a1a1a] pt-3">
-            <div className="flex items-center gap-2 rounded-2xl bg-[#111] border border-[#1e1e1e] px-3 py-2">
+            <div className="flex items-center gap-2 rounded-2xl bg-[#111] border border-[#1e1e1e] px-3 py-2 console-inset-panel">
               <Search size={14} className="text-[#555]" />
 
               <input
@@ -428,7 +428,7 @@ export function BeatLabRoom() {
 
             {(Object.keys(allTags) as FilterKey[]).map((key) =>
               allTags[key].length > 0 ? (
-                <div key={key} className="space-y-1.5">
+              <div key={key} className="space-y-1.5 console-filter-group rounded-2xl px-2 py-1.5">
                   <div className="text-[10px] text-[#555] uppercase tracking-[0.22em]">
                     {FILTER_LABELS[key]}
                   </div>
@@ -451,7 +451,7 @@ export function BeatLabRoom() {
             {(Object.keys(activeFilters).length > 0 || searchTerm) && (
               <button
                 onClick={clearFilters}
-                className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                className="hardware-button text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 px-3 py-2 rounded-xl bg-[#111] border border-red-900/30"
               >
                 <X size={12} />
                 Clear filters
@@ -459,7 +459,7 @@ export function BeatLabRoom() {
             )}
 
             {isAdmin && (
-              <div className="flex items-center gap-2 rounded-xl bg-[#101010] border border-[#1e1e1e] px-3 py-2 text-[10px] text-[#777]">
+              <div className="flex items-center gap-2 rounded-xl bg-[#101010] border border-[#1e1e1e] px-3 py-2 text-[10px] text-[#777] console-inset-panel">
                 <SlidersHorizontal size={13} className="text-[#f5c518]" />
                 Admin tools stay hidden from buyers. Edit mode exposes delete controls.
               </div>

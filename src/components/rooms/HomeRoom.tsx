@@ -352,8 +352,8 @@ export function HomeRoom() {
   };
 
   return (
-    <div className="min-h-screen relative">
-      <div className="flex items-center justify-between px-4 pt-safe pt-3 pb-2 relative z-10">
+    <div className="min-h-screen relative industrial-room-surface">
+      <div className="flex items-center justify-between px-4 pt-safe pt-3 pb-2 relative z-10 cracked-shell-panel home-console-header mx-3 mt-3">
         <div className="flex items-center gap-2">
           <button onClick={() => setCurrentRoom('home')} title="Go to home" aria-label="Go to home" className="flex-shrink-0">
             <img
@@ -446,7 +446,7 @@ export function HomeRoom() {
         </div>
       )}
 
-      <div className="flex flex-col items-center px-6 py-4 relative z-10">
+      <div className="flex flex-col items-center px-6 py-4 relative z-10 cracked-shell-panel neon-frame glow-yellow home-brand-shell mx-3 mt-3">
         <button
           onClick={handleLogoTap}
           className={`transition-all ${
@@ -507,7 +507,7 @@ export function HomeRoom() {
       </div>
 
       <div className="px-4 pb-5 relative z-10 space-y-5">
-        <div className="section-shell p-4 sm:p-5">
+        <div className="section-shell console-panel cracked-shell-panel cut-corner-card p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
               <h2 className="font-display text-xl font-800 text-white tracking-[0.02em]">
@@ -585,7 +585,7 @@ export function HomeRoom() {
           )}
         </div>
 
-        <div className="section-shell p-4">
+        <div className="section-shell console-panel cracked-shell-panel cut-corner-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="font-display text-lg font-800 text-white tracking-[0.02em]">
@@ -643,7 +643,7 @@ export function HomeRoom() {
       </div>
 
       <div className="px-3 pb-6 relative z-10">
-        <div className="home-room-grid grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <div className="bottom-console-nav cracked-shell-panel home-room-grid grid grid-cols-3 gap-3 sm:grid-cols-4">
           {homeTiles.map((tile, index) => (
             <button
               key={tile.id}
@@ -682,7 +682,7 @@ export function HomeRoom() {
       <div className="flex justify-center pb-4 relative z-10">
         <button
           onClick={() => setShowFamzModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#111] border border-[#1e1e1e] hover:border-[#f5c518]/20 transition-all"
+          className="hardware-button flex items-center gap-2 px-4 py-2 rounded-full bg-[#111] border border-[#1e1e1e] hover:border-[#f5c518]/20 transition-all"
         >
           <img src={MAIN_LOGO} alt="" className="w-4 h-4 object-contain" />
           <span className="text-xs text-[#888]">FAMZ</span>

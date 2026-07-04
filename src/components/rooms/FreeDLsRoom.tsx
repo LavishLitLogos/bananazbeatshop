@@ -96,15 +96,15 @@ export function FreeDLsRoom() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="sticky top-0 z-40 bg-[#080808]/90 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe">
+    <div className="min-h-screen industrial-room-surface">
+      <div className="sticky top-0 z-40 bg-[#080808]/90 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe cracked-shell-panel console-panel mx-3 mt-3 rounded-[1.6rem]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button
-              onClick={goBack}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
-              aria-label="Go back"
-            >
+              <button
+                onClick={goBack}
+                className="hardware-button p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+                aria-label="Go back"
+              >
               <ChevronLeft size={20} />
             </button>
 
@@ -143,7 +143,7 @@ export function FreeDLsRoom() {
             <div key={index} className="beat-card aspect-square animate-pulse bg-[#111]" />
           ))
         ) : beats.length === 0 ? (
-          <div className="col-span-3 text-center py-16 text-[#444] sm:col-span-4">
+            <div className="col-span-3 text-center py-16 text-[#444] sm:col-span-4 cracked-shell-panel console-panel rounded-[1.8rem] p-6">
             <img
               src="/assets/icons/grab-icon.png"
               alt=""
@@ -155,7 +155,7 @@ export function FreeDLsRoom() {
           beats.map((beat) => (
             <div
               key={beat.id}
-              className="beat-card cursor-pointer rounded-2xl"
+              className="beat-card cut-corner-card cursor-pointer rounded-2xl"
               onClick={() => {
                 setSelectedBeat(beat);
                 setShowDetail(true);
@@ -256,12 +256,12 @@ export function FreeDLsRoom() {
           onMouseDown={(event) => event.stopPropagation()}
         >
           <div
-            className="modal-box max-w-sm w-full p-6 text-center space-y-4"
+            className="modal-box cracked-shell-panel console-panel neon-frame glow-green cut-corner-card max-w-sm w-full p-6 text-center space-y-4"
             onClick={(event) => event.stopPropagation()}
           >
             <button
               onClick={() => setShowFreeDLMsg(false)}
-              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+              className="hardware-button absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
               aria-label="Close free download message"
             >
               <ChevronLeft size={16} className="rotate-180" />

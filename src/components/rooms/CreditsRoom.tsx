@@ -120,13 +120,13 @@ export function CreditsRoom() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white">
-      <div className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe">
+    <div className="min-h-screen bg-[#070707] text-white industrial-room-surface">
+      <div className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-[#1a1a1a] pt-safe cracked-shell-panel console-panel mx-3 mt-3 rounded-[1.6rem]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={goBack}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors flex-shrink-0"
+              className="hardware-button p-1.5 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors flex-shrink-0"
               aria-label="Go back"
             >
               <ChevronLeft size={20} />
@@ -145,7 +145,7 @@ export function CreditsRoom() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleShare()}
-              className="p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518] flex-shrink-0"
+              className="hardware-button p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-[#888] hover:text-[#f5c518] flex-shrink-0"
               aria-label="Share credits room"
             >
               <Share2 size={16} />
@@ -165,7 +165,7 @@ export function CreditsRoom() {
       </div>
 
       <div className="px-4 py-5 pb-32 space-y-5">
-        <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-5 text-center">
+        <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-5 text-center cracked-shell-panel console-panel neon-frame glow-yellow cut-corner-card">
           <img
             src={MAIN_LOGO}
             alt=""
@@ -190,12 +190,12 @@ export function CreditsRoom() {
             {Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
-                className="aspect-square rounded-2xl bg-[#111] border border-[#1e1e1e] animate-pulse"
+                className="aspect-square rounded-2xl bg-[#111] border border-[#1e1e1e] animate-pulse cracked-shell-panel console-panel"
               />
             ))}
           </div>
         ) : visibleCredits.length === 0 ? (
-          <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-6 text-center">
+          <div className="rounded-3xl border border-[#1e1e1e] bg-[#101010] p-6 text-center cracked-shell-panel console-panel cut-corner-card">
             <div className="font-display font-900 text-xl uppercase text-white">
               No Credits Yet
             </div>
@@ -214,7 +214,7 @@ export function CreditsRoom() {
                   key={song.id}
                   id={`credit-${song.id}`}
                   onClick={() => setSelectedCredit(song)}
-                  className="relative aspect-square rounded-2xl overflow-hidden border border-[#1e1e1e] bg-[#111] text-left hover:border-[#f5c518]/40 transition-all"
+                  className="relative aspect-square rounded-2xl overflow-hidden border border-[#1e1e1e] bg-[#111] text-left hover:border-[#f5c518]/40 transition-all cracked-shell-panel console-panel cut-corner-card"
                 >
                   <img
                     src={getCover(song)}
@@ -280,7 +280,7 @@ export function CreditsRoom() {
           onClick={(event) => event.target === event.currentTarget && setSelectedCredit(null)}
         >
           <div
-            className="modal-box max-w-md w-full p-5 space-y-4"
+            className="modal-box cracked-shell-panel console-panel neon-frame glow-yellow cut-corner-card max-w-md w-full p-5 space-y-4"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">
@@ -295,7 +295,7 @@ export function CreditsRoom() {
 
               <button
                 onClick={() => setSelectedCredit(null)}
-                className="p-2 rounded-xl bg-white/5 text-[#888] hover:text-white"
+                className="hardware-button p-2 rounded-xl bg-white/5 text-[#888] hover:text-white"
                 aria-label="Close"
               >
                 <X size={18} />
