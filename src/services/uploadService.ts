@@ -9,6 +9,17 @@ export type UploadResult = {
 
 type UploadBucket = 'beat-audio' | 'cover-art' | 'profile-media' | 'submissions' | 'videos' | 'bananaz-room';
 
+function normalizeContentType(file: File) {
+  const rawType = String(file.type || '').toLowerCase().trim();
+
+  if (!rawType) return undefined;
+  if (rawType === 'audio/mp3') return 'audio/mpeg';
+  if (rawType === 'audio/wave') return 'audio/wav';
+  if (rawType === 'image/jpg') return 'image/jpeg';
+
+  return rawType;
+}
+
 function cleanFileName(name: string) {
   const extension = name.split('.').pop()?.toLowerCase() || 'file';
   const base = name
@@ -24,13 +35,14 @@ function cleanFileName(name: string) {
 async function uploadToBucket(file: File, bucket: UploadBucket, folder = ''): Promise<UploadResult> {
   const fileName = cleanFileName(file.name);
   const storagePath = folder ? `${folder}/${fileName}` : fileName;
+  const contentType = normalizeContentType(file);
 
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(storagePath, file, {
       cacheControl: '31536000',
       upsert: false,
-      contentType: file.type || undefined,
+      contentType,
     });
 
   if (error) {

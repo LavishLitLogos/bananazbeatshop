@@ -181,7 +181,7 @@ export function BananazRoom() {
       supabase.from('bananaz_room_items').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
     ]);
 
-    if (settingsRes.error || itemsRes.error) {
+    if (itemsRes.error) {
       setUsingFallback(true);
       setLayoutModeState(fallback.layoutMode);
       setItems(fallback.items);
@@ -189,11 +189,13 @@ export function BananazRoom() {
       return;
     }
 
-    const nextLayoutMode = settingsRes.data?.layout_mode || fallback.layoutMode;
+    const nextLayoutMode = settingsRes.error
+      ? fallback.layoutMode
+      : settingsRes.data?.layout_mode || fallback.layoutMode;
     const nextItems = ((itemsRes.data || []) as BananazRoomItemRow[]).map(mapItemRow);
 
     setUsingFallback(false);
-    setSettingsId(settingsRes.data?.id || null);
+    setSettingsId(settingsRes.error ? null : settingsRes.data?.id || null);
     setLayoutModeState(nextLayoutMode);
     setItems(nextItems);
     syncFallback(nextLayoutMode, nextItems);
@@ -397,17 +399,7 @@ export function BananazRoom() {
     const sortOrder = items.length;
 
     if (usingFallback) {
-      const fallbackItem: BananazRoomItem = {
-        ...draft,
-        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`,
-        x,
-        y,
-        sortOrder,
-        createdAt: new Date().toISOString(),
-      };
-
-      updateItemsState([fallbackItem, ...items]);
-      setShowUpload(false);
+      addToast('Bananaz Room is not connected to live storage right now. Fix the live room table/bucket path first.', 'error');
       return;
     }
 
@@ -419,18 +411,7 @@ export function BananazRoom() {
       .single();
 
     if (error) {
-      addToast('Room save failed. Saved locally for now.', 'error');
-      setUsingFallback(true);
-      const fallbackItem: BananazRoomItem = {
-        ...draft,
-        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`,
-        x,
-        y,
-        sortOrder,
-        createdAt: new Date().toISOString(),
-      };
-      updateItemsState([fallbackItem, ...items]);
-      setShowUpload(false);
+      addToast(error.message || 'Room save failed.', 'error');
       return;
     }
 
@@ -737,6 +718,7 @@ function BananazRoomUploadModal({
   const [mediaType, setMediaType] = useState<MediaKind>('file');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -748,6 +730,7 @@ function BananazRoomUploadModal({
     }
 
     setUploading(true);
+    setUploadError('');
 
     try {
       const kind = inferMediaKind(file);
@@ -761,8 +744,13 @@ function BananazRoomUploadModal({
       }
 
       addToast('Bananaz Room file uploaded to its bucket.', 'success');
-    } catch {
-      addToast('Bananaz Room upload failed. Check the bananaz-room bucket.', 'error');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Bananaz Room upload failed. Check the bananaz-room bucket.';
+      setUploadError(message);
+      addToast(message, 'error');
     }
 
     setUploading(false);
@@ -850,6 +838,12 @@ function BananazRoomUploadModal({
             {url && (
               <div className="mt-3 text-xs text-[#777] break-all">
                 {url}
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="mt-3 rounded-xl border border-red-900/35 bg-red-950/20 px-3 py-2 text-xs text-red-300">
+                {uploadError}
               </div>
             )}
           </div>

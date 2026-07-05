@@ -9,7 +9,6 @@ import {
   Eye,
   FileAudio,
   FileText,
-  GripVertical,
   Inbox,
   LayoutDashboard,
   Lock,
@@ -103,8 +102,6 @@ export function AdminPanel() {
     addToast,
     adminEditMode,
     setAdminEditMode,
-    reorderMode,
-    setReorderMode,
     refreshContent,
     setRoomCounts,
   } = useApp();
@@ -691,7 +688,6 @@ export function AdminPanel() {
               <BeatsTab
                 beats={filteredBeats}
                 busyId={busyId}
-                reorderMode={reorderMode}
                 onNew={() => {
                   setEditingBeat(null);
                   setShowBeatUpload(true);
@@ -749,10 +745,8 @@ export function AdminPanel() {
             {activeTab === 'settings' && (
               <SettingsTab
                 editMode={adminEditMode}
-                reorderMode={reorderMode}
                 auditLog={auditLog}
                 onEditMode={setAdminEditMode}
-                onReorderMode={setReorderMode}
                 onRefresh={refreshEverything}
                 onLogout={logoutToBuyerMode}
               />
@@ -880,7 +874,6 @@ function OverviewTab({
 function BeatsTab({
   beats,
   busyId,
-  reorderMode,
   onNew,
   onEdit,
   onDelete,
@@ -888,7 +881,6 @@ function BeatsTab({
 }: {
   beats: Beat[];
   busyId: string | null;
-  reorderMode: boolean;
   onNew: () => void;
   onEdit: (beat: Beat) => void;
   onDelete: (beat: Beat) => void;
@@ -908,14 +900,6 @@ function BeatsTab({
           <ToggleRow label="Hidden" active={beat.hidden} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { hidden: !beat.hidden })} />
           <ToggleRow label="Sold" active={beat.sold} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { sold: !beat.sold })} />
           <ToggleRow label="Release Download" active={beat.release_download} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { release_download: !beat.release_download })} />
-
-          {reorderMode && (
-            <CustomOrderControl
-              value={Number((beat as Beat & { custom_order?: number }).custom_order || 0)}
-              disabled={busyId === beat.id}
-              onSave={(customOrder) => onUpdate(beat, { custom_order: customOrder } as Partial<Beat>)}
-            />
-          )}
 
           <ActionRow onEdit={() => onEdit(beat)} onDelete={() => onDelete(beat)} />
         </AdminCard>
@@ -1155,18 +1139,14 @@ type EditableSectionId =
 
 function SettingsTab({
   editMode,
-  reorderMode,
   auditLog,
   onEditMode,
-  onReorderMode,
   onRefresh,
   onLogout,
 }: {
   editMode: boolean;
-  reorderMode: boolean;
   auditLog: AuditEntry[];
   onEditMode: (value: boolean) => void;
-  onReorderMode: (value: boolean) => void;
   onRefresh: () => void;
   onLogout: () => void;
 }) {
@@ -1326,7 +1306,6 @@ function SettingsTab({
         onSave={saveAdminSettings}
       >
         <ToggleRow label="Edit Mode" active={editMode} onClick={() => onEditMode(!editMode)} />
-        <ToggleRow label="Reorder Mode" active={reorderMode} onClick={() => onReorderMode(!reorderMode)} />
         <ToggleRow
           label="Allow Submissions"
           active={adminSettings.allowSubmissions}
@@ -1574,65 +1553,14 @@ function SettingsTab({
       <EditableSettingsSection
         id="contact"
         title="Protected Contact Tab"
-        subtitle="Social handles only. Payment rails are already wired elsewhere. Unlock before editing."
+        subtitle="Extra contact copy only. Social handles live in the profile editor."
         editingSection={editingSection}
         onEdit={setEditingSection}
         onCancel={cancelEditing}
         onSave={saveAdminSettings}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <AdminTextInput
-            label="Instagram @"
-            value={adminSettings.contactInfo.socials.instagram}
-            onChange={(value) =>
-              updateAdminSettings('contactInfo', {
-                ...adminSettings.contactInfo,
-                socials: {
-                  ...adminSettings.contactInfo.socials,
-                  instagram: sanitizeHandle(value),
-                },
-              })
-            }
-          />
-          <AdminTextInput
-            label="Threads @"
-            value={adminSettings.contactInfo.socials.threads}
-            onChange={(value) =>
-              updateAdminSettings('contactInfo', {
-                ...adminSettings.contactInfo,
-                socials: {
-                  ...adminSettings.contactInfo.socials,
-                  threads: sanitizeHandle(value),
-                },
-              })
-            }
-          />
-          <AdminTextInput
-            label="YouTube @"
-            value={adminSettings.contactInfo.socials.youtube}
-            onChange={(value) =>
-              updateAdminSettings('contactInfo', {
-                ...adminSettings.contactInfo,
-                socials: {
-                  ...adminSettings.contactInfo.socials,
-                  youtube: sanitizeHandle(value),
-                },
-              })
-            }
-          />
-          <AdminTextInput
-            label="Facebook @"
-            value={adminSettings.contactInfo.socials.facebook}
-            onChange={(value) =>
-              updateAdminSettings('contactInfo', {
-                ...adminSettings.contactInfo,
-                socials: {
-                  ...adminSettings.contactInfo.socials,
-                  facebook: sanitizeHandle(value),
-                },
-              })
-            }
-          />
+        <div className="rounded-2xl border border-[#1a1a1a] bg-[#0f0f0f] px-4 py-3 text-xs text-[#777]">
+          Social media handles are managed in the Profile Editor so they only live in one place.
         </div>
 
         <AdminTextArea
@@ -1899,40 +1827,6 @@ function ToggleRow({
   );
 }
 
-function CustomOrderControl({
-  value,
-  disabled,
-  onSave,
-}: {
-  value: number;
-  disabled?: boolean;
-  onSave: (value: number) => void;
-}) {
-  const [customOrder, setCustomOrder] = useState(String(value || ''));
-
-  return (
-    <div className="flex items-center gap-2 border-t border-[#171717] pt-3">
-      <GripVertical size={14} className="text-[#555]" />
-
-      <input
-        className="input-dark flex-1 px-3 py-2 text-xs"
-        type="number"
-        placeholder="Custom order"
-        value={customOrder}
-        onChange={(event) => setCustomOrder(event.target.value)}
-      />
-
-      <button
-        onClick={() => onSave(Number(customOrder || 0))}
-        disabled={disabled}
-        className="btn-dark px-3 py-2 rounded-lg text-xs disabled:opacity-40"
-      >
-        Save
-      </button>
-    </div>
-  );
-}
-
 function ActionRow({
   onEdit,
   onDelete,
@@ -1940,24 +1834,43 @@ function ActionRow({
   onEdit?: () => void;
   onDelete: () => void;
 }) {
+  const [deleteArmed, setDeleteArmed] = useState(false);
+
   return (
     <div className="grid grid-cols-2 gap-2 border-t border-[#171717] pt-3">
-      {onEdit ? (
-        <button onClick={onEdit} className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2">
-          <Edit2 size={13} />
-          Edit
+      <button
+        onClick={() => {
+          if (onEdit) {
+            onEdit();
+            return;
+          }
+
+          setDeleteArmed((current) => !current);
+        }}
+        className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2"
+      >
+        <Edit2 size={13} />
+        {onEdit ? 'Edit' : deleteArmed ? 'Hide Delete' : 'Manage'}
+      </button>
+
+      {deleteArmed ? (
+        <button
+          onClick={onDelete}
+          className="bg-red-950/20 border border-red-900/30 text-red-400 py-2 rounded-xl text-xs flex items-center justify-center gap-2"
+        >
+          <Trash2 size={13} />
+          Delete
         </button>
       ) : (
-        <div />
+        <button
+          type="button"
+          onClick={() => setDeleteArmed(true)}
+          className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2 text-[#888]"
+        >
+          <Edit2 size={13} />
+          Open Delete
+        </button>
       )}
-
-      <button
-        onClick={onDelete}
-        className="bg-red-950/20 border border-red-900/30 text-red-400 py-2 rounded-xl text-xs flex items-center justify-center gap-2"
-      >
-        <Trash2 size={13} />
-        Delete
-      </button>
     </div>
   );
 }
