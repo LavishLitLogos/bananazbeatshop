@@ -70,7 +70,6 @@ export function ProdByRoom() {
     let query = supabase
       .from('prod_by_songs')
       .select('*')
-      .eq('room_type', 'prodby')
       .order('created_at', { ascending: false });
 
     if (!isAdmin) {
@@ -624,7 +623,6 @@ export function SongUploadModal({
   );
   const [audioUrl, setAudioUrl] = useState(song?.audio_file_url || '');
   const [coverUrl, setCoverUrl] = useState(song?.cover_art_url || '');
-  const [externalUrl, setExternalUrl] = useState(song?.external_url || '');
   const [price, setPrice] = useState(Number(song?.price || 250));
   const [isFree, setIsFree] = useState(
     song ? isBeatFree(song) : isCreditsMode
@@ -762,8 +760,6 @@ export function SongUploadModal({
       rights_text: cleanRightsText || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : defaultCreditLine),
       audio_file_url: audioUrl.trim(),
       cover_art_url: coverUrl.trim(),
-      room_type: isCreditsMode ? 'credits' : 'prodby',
-      external_url: isCreditsMode ? externalUrl.trim() : '',
       price: shouldTreatAsExclusive ? Number(price) || 250 : isCreditsMode ? Number(price) || 0 : 0,
       is_free: shouldBeFree,
       release_download: shouldTreatAsExclusive ? released : isCreditsMode ? released : true,
@@ -981,15 +977,6 @@ export function SongUploadModal({
             placeholder="Rights text"
             className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
           />
-
-          {isCreditsMode && (
-            <input
-              value={externalUrl}
-              onChange={(event) => setExternalUrl(event.target.value)}
-              placeholder="Optional external artist/song URL"
-              className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
-            />
-          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <label className="space-y-1 col-span-2 sm:col-span-1">

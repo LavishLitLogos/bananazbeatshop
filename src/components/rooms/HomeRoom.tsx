@@ -111,7 +111,6 @@ export function HomeRoom() {
       supabase
         .from('prod_by_songs')
         .select('*')
-        .eq('room_type', 'prodby')
         .eq('hidden', false)
         .eq('admin_approved', true)
         .order('created_at', { ascending: false })

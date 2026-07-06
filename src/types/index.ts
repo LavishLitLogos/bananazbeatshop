@@ -78,8 +78,6 @@ export interface ProdBySong {
   cover_art_url?: string;
   description?: string;
   rights_text?: string;
-  room_type?: 'prodby' | 'credits';
-  external_url?: string;
   // Pricing & release
   price?: number;
   is_free?: boolean;
