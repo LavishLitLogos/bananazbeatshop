@@ -8,6 +8,8 @@ import {
   Play,
   Plus,
   Share2,
+  SkipForward,
+  Square,
   ShoppingBag,
   Trash2,
   Upload,
@@ -371,7 +373,19 @@ export function ProdByRoom() {
                 adminEditMode={adminEditMode}
                 deleting={deletingId === song.id}
                 onPlay={() => handlePlaySong(song)}
-                onQueue={() => handlePlayQueueFromSong(song)}
+                onStop={() => {
+                  if (audio.currentBeat?.id === song.id) {
+                    audio.stop();
+                  }
+                }}
+                onSkip={() => {
+                  if (audio.currentBeat?.id === song.id) {
+                    audio.next();
+                    return;
+                  }
+
+                  handlePlayQueueFromSong(song);
+                }}
                 onShare={() => handleShareSong(song)}
                 onPurchase={() => handlePurchaseSong(song)}
                 onDownload={() => handleDownloadSong(song)}
@@ -406,7 +420,8 @@ function SongCard({
   adminEditMode,
   deleting,
   onPlay,
-  onQueue,
+  onStop,
+  onSkip,
   onShare,
   onPurchase,
   onDownload,
@@ -420,7 +435,8 @@ function SongCard({
   adminEditMode: boolean;
   deleting: boolean;
   onPlay: () => void;
-  onQueue: () => void;
+  onStop: () => void;
+  onSkip: () => void;
   onShare: () => void;
   onPurchase: () => void;
   onDownload: () => void;
@@ -459,6 +475,17 @@ function SongCard({
               Hidden
             </span>
           )}
+        </div>
+
+        <div className="absolute top-2 right-2 flex gap-1">
+          <button
+            onClick={onShare}
+            disabled={Boolean(song.no_sharing)}
+            className="w-8 h-8 rounded-full bg-black/70 border border-white/10 text-white hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+            title="Share song"
+          >
+            <Share2 size={12} />
+          </button>
         </div>
 
         {isPlaying && (
@@ -504,11 +531,11 @@ function SongCard({
             </button>
 
             <button
-              onClick={onQueue}
+              onClick={onStop}
               className="py-2 rounded-xl bg-[#151515] border border-[#222] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
-              title="Play queue from this song"
+              title="Stop song"
             >
-              <Play size={14} />
+              <Square size={14} fill="currentColor" />
             </button>
 
             <button
@@ -527,19 +554,18 @@ function SongCard({
                   ? 'bg-green-900/35 border-green-700/25 text-green-400'
                   : 'bg-[#151515] border-[#222] text-[#555]'
               }`}
-              title={releaseAllowed ? 'Download song' : 'Download locked'}
+              title={releaseAllowed ? 'Download song' : 'Release locked'}
             >
               {releaseAllowed ? <Download size={14} /> : <Lock size={14} />}
             </button>
 
             <button
-              onClick={onShare}
-              disabled={Boolean(song.no_sharing)}
+              onClick={onSkip}
               className="py-2 rounded-xl bg-[#151515] border border-[#222] text-[#888] hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-              title="Share song"
+              title="Skip to next song"
             >
-              <Share2 size={14} />
-            </button>
+              <SkipForward size={14} />
+        </button>
         </div>
 
         {isAdmin && (
@@ -615,6 +641,7 @@ export function SongUploadModal({
   const [tagFile, setTagFile] = useState<File | null>(null);
   const [tagPreviewUrl, setTagPreviewUrl] = useState('');
   const [tagPlacements, setTagPlacements] = useState('');
+  const [tagAppliedToCurrentAudio, setTagAppliedToCurrentAudio] = useState(false);
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -643,11 +670,21 @@ export function SongUploadModal({
     return () => URL.revokeObjectURL(objectUrl);
   }, [tagFile]);
 
+  useEffect(() => {
+    if (!tagEnabled) {
+      setTagAppliedToCurrentAudio(false);
+      return;
+    }
+
+    setTagAppliedToCurrentAudio(false);
+  }, [tagEnabled, tagFile, tagPlacements]);
+
   const handleAudioFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setAudioFile(file);
+    setTagAppliedToCurrentAudio(false);
     setAudioUploading(true);
 
     try {
@@ -670,6 +707,7 @@ export function SongUploadModal({
           title.trim() || file.name
         );
         setAudioFile(uploadFile);
+        setTagAppliedToCurrentAudio(true);
       }
 
       const result = await uploadAudio(uploadFile);
@@ -728,12 +766,49 @@ export function SongUploadModal({
     const cleanDescription = description.trim() || defaultCreditLine;
     const cleanRightsText = rightsText.trim() || defaultCreditLine;
 
+    let finalAudioUrl = audioUrl.trim();
+    let finalAudioFile = audioFile;
+
+    if (tagEnabled && tagFile && !tagAppliedToCurrentAudio) {
+      const placements = tagPlacements
+        .split(',')
+        .map((value) => Number(value.trim()))
+        .filter((value) => Number.isFinite(value) && value >= 0);
+
+      if (placements.length === 0) {
+        addToast('TAGNANAZ needs at least one placement time in seconds.', 'error');
+        setSaving(false);
+        return;
+      }
+
+      if (!finalAudioFile && !finalAudioUrl) {
+        addToast('Upload song audio before tagging it.', 'error');
+        setSaving(false);
+        return;
+      }
+
+      const taggedFile = await renderTaggedAudio(
+        finalAudioFile || finalAudioUrl,
+        tagFile,
+        placements,
+        title.trim() || 'tagged-song'
+      );
+
+      const uploadedTaggedAudio = await uploadAudio(taggedFile);
+      finalAudioFile = taggedFile;
+      finalAudioUrl = uploadedTaggedAudio.url;
+      setAudioFile(taggedFile);
+      setAudioUrl(uploadedTaggedAudio.url);
+      setTagAppliedToCurrentAudio(true);
+      addToast('TAGNANAZ applied to the posted song.', 'success');
+    }
+
     const payload = {
       title: title.trim(),
       artist_name: isCreditsMode ? artistName.trim() : '',
       description: cleanDescription,
       rights_text: cleanRightsText || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : defaultCreditLine),
-      audio_file_url: audioUrl.trim(),
+      audio_file_url: finalAudioUrl,
       cover_art_url: coverUrl.trim(),
       price: shouldTreatAsExclusive ? Number(price) || 250 : isCreditsMode ? Number(price) || 0 : 0,
       is_free: shouldBeFree,

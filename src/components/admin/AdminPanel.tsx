@@ -688,6 +688,7 @@ export function AdminPanel() {
               <BeatsTab
                 beats={filteredBeats}
                 busyId={busyId}
+                editMode={adminEditMode}
                 onNew={() => {
                   setEditingBeat(null);
                   setShowBeatUpload(true);
@@ -705,6 +706,7 @@ export function AdminPanel() {
               <TapesTab
                 tapes={filteredTapes}
                 busyId={busyId}
+                editMode={adminEditMode}
                 onDelete={(tape) => deleteRow('beat_tapes', tape.id, 'beat_tape')}
                 onUpdate={updateBeatTape}
               />
@@ -714,19 +716,21 @@ export function AdminPanel() {
               <ProdByTab
                 songs={filteredSongs}
                 busyId={busyId}
+                editMode={adminEditMode}
                 onDelete={(song) => deleteRow('prod_by_songs', song.id, 'prod_by_song')}
                 onUpdate={updateProdBySong}
               />
             )}
 
             {activeTab === 'orders' && (
-              <OrdersTab orders={filteredOrders} busyId={busyId} onDelete={(order) => deleteRow('orders', order.id, 'order')} onUpdate={updateOrder} />
+              <OrdersTab orders={filteredOrders} busyId={busyId} editMode={adminEditMode} onDelete={(order) => deleteRow('orders', order.id, 'order')} onUpdate={updateOrder} />
             )}
 
             {activeTab === 'submissions' && (
               <SubmissionsTab
                 submissions={filteredSubmissions}
                 busyId={busyId}
+                editMode={adminEditMode}
                 onDelete={(submission) => deleteRow('submissions', submission.id, 'submission')}
                 onUpdate={updateSubmission}
               />
@@ -874,6 +878,7 @@ function OverviewTab({
 function BeatsTab({
   beats,
   busyId,
+  editMode,
   onNew,
   onEdit,
   onDelete,
@@ -881,6 +886,7 @@ function BeatsTab({
 }: {
   beats: Beat[];
   busyId: string | null;
+  editMode: boolean;
   onNew: () => void;
   onEdit: (beat: Beat) => void;
   onDelete: (beat: Beat) => void;
@@ -901,7 +907,7 @@ function BeatsTab({
           <ToggleRow label="Sold" active={beat.sold} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { sold: !beat.sold })} />
           <ToggleRow label="Release Download" active={beat.release_download} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { release_download: !beat.release_download })} />
 
-          <ActionRow onEdit={() => onEdit(beat)} onDelete={() => onDelete(beat)} />
+          <ActionRow onEdit={() => onEdit(beat)} onDelete={() => onDelete(beat)} showDelete={editMode} />
         </AdminCard>
       ))}
     </div>
@@ -911,11 +917,13 @@ function BeatsTab({
 function TapesTab({
   tapes,
   busyId,
+  editMode,
   onDelete,
   onUpdate,
 }: {
   tapes: BeatTape[];
   busyId: string | null;
+  editMode: boolean;
   onDelete: (tape: BeatTape) => void;
   onUpdate: (tape: BeatTape, updates: Partial<BeatTape>) => void;
 }) {
@@ -929,7 +937,7 @@ function TapesTab({
           <ToggleRow label="Hidden" active={tape.hidden} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { hidden: !tape.hidden })} />
           <ToggleRow label="Free" active={tape.is_free} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { is_free: !tape.is_free })} />
           <ToggleRow label="Co-Lab Usable" active={tape.colab_usable} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { colab_usable: !tape.colab_usable })} />
-          <ActionRow onDelete={() => onDelete(tape)} />
+          <ActionRow onDelete={() => onDelete(tape)} showDelete={editMode} />
         </AdminCard>
       ))}
     </div>
@@ -939,11 +947,13 @@ function TapesTab({
 function ProdByTab({
   songs,
   busyId,
+  editMode,
   onDelete,
   onUpdate,
 }: {
   songs: ProdBySong[];
   busyId: string | null;
+  editMode: boolean;
   onDelete: (song: ProdBySong) => void;
   onUpdate: (song: ProdBySong, updates: Partial<ProdBySong>) => void;
 }) {
@@ -958,7 +968,7 @@ function ProdByTab({
           <ToggleRow label="Hidden" active={song.hidden} disabled={busyId === song.id} onClick={() => onUpdate(song, { hidden: !song.hidden })} />
           <ToggleRow label="Sold" active={Boolean(song.sold)} disabled={busyId === song.id} onClick={() => onUpdate(song, { sold: !song.sold })} />
           <ToggleRow label="Release Download" active={Boolean(song.release_download)} disabled={busyId === song.id} onClick={() => onUpdate(song, { release_download: !song.release_download })} />
-          <ActionRow onDelete={() => onDelete(song)} />
+          <ActionRow onDelete={() => onDelete(song)} showDelete={editMode} />
         </AdminCard>
       ))}
     </div>
@@ -968,11 +978,13 @@ function ProdByTab({
 function OrdersTab({
   orders,
   busyId,
+  editMode,
   onDelete,
   onUpdate,
 }: {
   orders: Order[];
   busyId: string | null;
+  editMode: boolean;
   onDelete: (order: Order) => void;
   onUpdate: (order: Order, updates: Partial<Order>) => void;
 }) {
@@ -992,7 +1004,7 @@ function OrdersTab({
           <ToggleRow label="Payment Received" active={Boolean(order.payment_received)} disabled={busyId === order.id} onClick={() => onUpdate(order, { payment_received: !order.payment_received })} />
           <ToggleRow label="Release Download" active={order.release_download} disabled={busyId === order.id} onClick={() => onUpdate(order, { release_download: !order.release_download, status: order.release_download ? 'Sold' : 'Released' })} />
           <ToggleRow label="Sold" active={order.sold} disabled={busyId === order.id} onClick={() => onUpdate(order, { sold: !order.sold })} />
-          <ActionRow onDelete={() => onDelete(order)} />
+          <ActionRow onDelete={() => onDelete(order)} showDelete={editMode} />
         </AdminCard>
       ))}
     </div>
@@ -1002,11 +1014,13 @@ function OrdersTab({
 function SubmissionsTab({
   submissions,
   busyId,
+  editMode,
   onDelete,
   onUpdate,
 }: {
   submissions: Submission[];
   busyId: string | null;
+  editMode: boolean;
   onDelete: (submission: Submission) => void;
   onUpdate: (submission: Submission, updates: Partial<Submission>) => void;
 }) {
@@ -1057,7 +1071,7 @@ function SubmissionsTab({
           <ToggleRow label="Prod By Eligible" active={submission.produced_by_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { produced_by_toggle: !submission.produced_by_toggle })} />
           <ToggleRow label="Exclusive Eligible" active={submission.exclusive_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { exclusive_toggle: !submission.exclusive_toggle })} />
           <ToggleRow label="List Eligible" active={submission.list_eligible_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { list_eligible_toggle: !submission.list_eligible_toggle })} />
-          <ActionRow onDelete={() => onDelete(submission)} />
+          <ActionRow onDelete={() => onDelete(submission)} showDelete={editMode} />
         </AdminCard>
       ))}
     </div>
@@ -1830,30 +1844,27 @@ function ToggleRow({
 function ActionRow({
   onEdit,
   onDelete,
+  showDelete = true,
 }: {
   onEdit?: () => void;
   onDelete: () => void;
+  showDelete?: boolean;
 }) {
-  const [deleteArmed, setDeleteArmed] = useState(false);
-
   return (
     <div className="grid grid-cols-2 gap-2 border-t border-[#171717] pt-3">
-      <button
-        onClick={() => {
-          if (onEdit) {
-            onEdit();
-            return;
-          }
+      {onEdit ? (
+        <button
+          onClick={onEdit}
+          className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2"
+        >
+          <Edit2 size={13} />
+          Edit
+        </button>
+      ) : (
+        <div />
+      )}
 
-          setDeleteArmed((current) => !current);
-        }}
-        className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2"
-      >
-        <Edit2 size={13} />
-        {onEdit ? 'Edit' : deleteArmed ? 'Hide Delete' : 'Manage'}
-      </button>
-
-      {deleteArmed ? (
+      {showDelete ? (
         <button
           onClick={onDelete}
           className="bg-red-950/20 border border-red-900/30 text-red-400 py-2 rounded-xl text-xs flex items-center justify-center gap-2"
@@ -1862,14 +1873,7 @@ function ActionRow({
           Delete
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={() => setDeleteArmed(true)}
-          className="btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-2 text-[#888]"
-        >
-          <Edit2 size={13} />
-          Open Delete
-        </button>
+        <div />
       )}
     </div>
   );
