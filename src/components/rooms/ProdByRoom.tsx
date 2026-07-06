@@ -440,27 +440,13 @@ function SongCard({
       } ${song.hidden ? 'opacity-60' : ''}`}
     >
       <div className="relative aspect-square overflow-hidden rounded-t-3xl bg-black">
-        <button
-          onClick={onPlay}
-          className="absolute inset-0"
-          aria-label={`Play ${song.title}`}
-        >
-          <img
-            src={getSongCover(song)}
-            alt={song.title}
-            className="w-full h-full object-cover"
-          />
+        <img
+          src={getSongCover(song)}
+          alt={song.title}
+          className="w-full h-full object-cover"
+        />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/35 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-[#f5c518] text-black flex items-center justify-center shadow-xl">
-              {isPlaying ? (
-                <Pause size={17} fill="black" />
-              ) : (
-                <Play size={17} fill="black" className="ml-0.5" />
-              )}
-            </div>
-          </div>
-        </button>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/35" />
 
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {song.exclusive && (
@@ -473,17 +459,6 @@ function SongCard({
               Hidden
             </span>
           )}
-        </div>
-
-        <div className="absolute top-2 right-2 flex gap-1">
-          <button
-            onClick={onShare}
-            disabled={Boolean(song.no_sharing)}
-            className="w-8 h-8 rounded-full bg-black/70 border border-white/10 text-white hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-            title="Share"
-          >
-            <Share2 size={12} />
-          </button>
         </div>
 
         {isPlaying && (
