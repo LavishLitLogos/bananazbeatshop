@@ -775,7 +775,7 @@ function TapeUploadModal({
       setCoverUrl(result.url);
       addToast('Cover uploaded.', 'success');
     } catch {
-      addToast('Cover upload failed. Paste a URL instead.', 'error');
+      addToast('Cover upload failed.', 'error');
     }
 
     setCoverUploading(false);
@@ -820,7 +820,7 @@ function TapeUploadModal({
         )
       );
 
-      addToast('Track upload failed. Paste a URL instead.', 'error');
+      addToast('Track upload failed.', 'error');
     }
   };
 
@@ -1028,12 +1028,9 @@ function TapeUploadModal({
                 className="w-full min-h-[92px] bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45 resize-none"
               />
 
-              <input
-                value={coverUrl}
-                onChange={(event) => setCoverUrl(event.target.value)}
-                placeholder="Cover URL"
-                className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
-              />
+              <div className="w-full bg-[#0f0f0f] border border-[#222] rounded-2xl px-4 py-3 text-[#bbb] text-sm">
+                {coverUrl ? 'Cover attached.' : 'Upload cover art.'}
+              </div>
             </div>
           </div>
 
@@ -1188,13 +1185,9 @@ function TapeUploadModal({
                   </div>
 
                   <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <input
-                      value={track.url}
-                      onChange={(event) => updateTrack(index, 'url', event.target.value)}
-                      placeholder="Audio URL"
-                      className="bg-[#0d0d0d] border border-[#222] rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#f5c518]/45"
-                    />
-
+                    <div className="bg-[#0d0d0d] border border-[#222] rounded-xl px-3 py-2 text-[#bbb] text-sm truncate">
+                      {track.url ? 'Track audio attached.' : 'Upload track audio.'}
+                    </div>
                     <label className="px-3 py-2 rounded-xl bg-[#111] border border-[#222] text-[#aaa] hover:text-[#f5c518] text-xs font-bold uppercase cursor-pointer flex items-center gap-1.5">
                       {track.uploading ? (
                         <>

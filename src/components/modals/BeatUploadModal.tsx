@@ -296,19 +296,14 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
           </label>
         </div>
 
-        <input
-          className="input-dark w-full px-4 py-3 text-sm"
-          value={form.audio_file_url}
-          onChange={(event) => updateUploadForm('audio_file_url', event.target.value)}
-          placeholder="Audio file URL"
-        />
-
-        <input
-          className="input-dark w-full px-4 py-3 text-sm"
-          value={form.cover_art_url}
-          onChange={(event) => updateUploadForm('cover_art_url', event.target.value)}
-          placeholder="Cover art URL"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-xs text-[#aaa]">
+            {audioFile || form.audio_file_url ? 'Audio attached.' : 'Upload beat audio.'}
+          </div>
+          <div className="rounded-xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-xs text-[#aaa]">
+            {coverFile || form.cover_art_url ? 'Cover attached.' : 'Upload cover art.'}
+          </div>
+        </div>
 
         {(audioFile || form.audio_file_url) && (
           <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3">

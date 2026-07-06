@@ -835,11 +835,9 @@ function BananazRoomUploadModal({
               <input type="file" className="hidden" onChange={handleFile} />
             </label>
 
-            {url && (
-              <div className="mt-3 text-xs text-[#777] break-all">
-                {url}
-              </div>
-            )}
+            <div className="mt-3 text-xs text-[#777]">
+              {url ? 'File attached and ready.' : 'Attach a file to continue.'}
+            </div>
 
             {uploadError && (
               <div className="mt-3 rounded-xl border border-red-900/35 bg-red-950/20 px-3 py-2 text-xs text-red-300">

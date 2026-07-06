@@ -94,7 +94,7 @@ export async function renderTaggedAudio(
       ...placements.map((placement) => Math.max(0, placement) + tagBuffer.duration)
     );
 
-    const offlineContext = new OfflineAudioContext(2, Math.ceil(duration * sourceBuffer.sampleRate), sourceBuffer.sampleRate);
+    const offlineContext = new OfflineAudioContext(1, Math.ceil(duration * sourceBuffer.sampleRate), sourceBuffer.sampleRate);
     const sourceNode = offlineContext.createBufferSource();
     sourceNode.buffer = sourceBuffer;
     sourceNode.connect(offlineContext.destination);

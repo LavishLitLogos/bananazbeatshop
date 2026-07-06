@@ -70,6 +70,7 @@ export function ProdByRoom() {
     let query = supabase
       .from('prod_by_songs')
       .select('*')
+      .eq('room_type', 'prodby')
       .order('created_at', { ascending: false });
 
     if (!isAdmin) {
@@ -279,7 +280,7 @@ export function ProdByRoom() {
               </h1>
 
               <p className="text-[10px] text-[#555] mt-0.5 truncate">
-                {visibleSongs.length} songs - Complete records
+                {visibleSongs.length} songs - Concept records
               </p>
             </div>
           </div>
@@ -321,14 +322,16 @@ export function ProdByRoom() {
         </div>
       </div>
 
-      <div className="px-3 py-4 space-y-3 pb-32">
+      <div className="px-3 py-4 pb-32">
         {loading ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-24 rounded-3xl animate-pulse bg-[#111] border border-[#1e1e1e]"
-            />
-          ))
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="aspect-square rounded-3xl animate-pulse bg-[#111] border border-[#1e1e1e]"
+              />
+            ))}
+          </div>
         ) : visibleSongs.length === 0 ? (
           <div className="text-center py-16 text-[#444]">
             <img
@@ -342,7 +345,7 @@ export function ProdByRoom() {
             </div>
 
             <div className="text-xs text-[#555] mt-1">
-              Complete songs produced by {BRAND_NAME} will appear here.
+              Song concepts from {BRAND_NAME} will appear here.
             </div>
 
             {isAdmin && (
@@ -358,30 +361,33 @@ export function ProdByRoom() {
             )}
           </div>
         ) : (
-          visibleSongs.map((song) => (
-            <SongCard
-              key={song.id}
-              song={song}
-              isCurrentSong={audio.currentBeat?.id === song.id}
-              isPlaying={audio.currentBeat?.id === song.id && audio.isPlaying}
-              isAdmin={isAdmin}
-              adminEditMode={adminEditMode}
-              deleting={deletingId === song.id}
-              onPlay={() => handlePlaySong(song)}
-              onQueue={() => handlePlayQueueFromSong(song)}
-              onShare={() => handleShareSong(song)}
-              onPurchase={() => handlePurchaseSong(song)}
-              onDownload={() => handleDownloadSong(song)}
-              onEdit={() => handleEditSong(song)}
-              onDelete={() => handleDeleteSong(song)}
-            />
-          ))
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {visibleSongs.map((song) => (
+              <SongCard
+                key={song.id}
+                song={song}
+                isCurrentSong={audio.currentBeat?.id === song.id}
+                isPlaying={audio.currentBeat?.id === song.id && audio.isPlaying}
+                isAdmin={isAdmin}
+                adminEditMode={adminEditMode}
+                deleting={deletingId === song.id}
+                onPlay={() => handlePlaySong(song)}
+                onQueue={() => handlePlayQueueFromSong(song)}
+                onShare={() => handleShareSong(song)}
+                onPurchase={() => handlePurchaseSong(song)}
+                onDownload={() => handleDownloadSong(song)}
+                onEdit={() => handleEditSong(song)}
+                onDelete={() => handleDeleteSong(song)}
+              />
+            ))}
+          </div>
         )}
       </div>
 
       {showUpload && (
         <SongUploadModal
           song={editingSong}
+          mode="prodby"
           onClose={closeUpload}
           onSave={async () => {
             closeUpload();
@@ -434,10 +440,10 @@ function SongCard({
           : 'border-[#1e1e1e]'
       } ${song.hidden ? 'opacity-60' : ''}`}
     >
-      <div className="flex gap-3 p-3">
+      <div className="relative aspect-square overflow-hidden rounded-t-3xl bg-black">
         <button
           onClick={onPlay}
-          className="relative w-24 h-24 rounded-2xl overflow-hidden bg-black border border-white/10 flex-shrink-0"
+          className="absolute inset-0"
           aria-label={`Play ${song.title}`}
         >
           <img
@@ -446,7 +452,7 @@ function SongCard({
             className="w-full h-full object-cover"
           />
 
-          <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/35 flex items-center justify-center">
             <div className="w-10 h-10 rounded-full bg-[#f5c518] text-black flex items-center justify-center shadow-xl">
               {isPlaying ? (
                 <Pause size={17} fill="black" />
@@ -457,58 +463,64 @@ function SongCard({
           </div>
         </button>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="font-display font-800 text-white truncate leading-tight">
-                {song.title}
-              </div>
-
-              <div className="text-[11px] text-[#f5c518] mt-1 truncate">
-                {song.artist_name || 'Artist TBA'}
-              </div>
-
-              <div className="text-[10px] text-[#777] mt-1">
-                Song · Produced by {BRAND_NAME} · {priceLabel}
-              </div>
-            </div>
-
-            <button
-              onClick={onShare}
-              disabled={Boolean(song.no_sharing)}
-              className="w-8 h-8 rounded-xl bg-[#111] border border-[#222] text-[#888] hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-              title="Share"
-            >
-              <Share2 size={14} />
-            </button>
-          </div>
-
-          {song.description && (
-            <p className="text-xs text-[#777] mt-2 line-clamp-2">
-              {song.description}
-            </p>
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {song.exclusive && (
+            <span className="rounded-full bg-[#f5c518] px-2 py-1 text-[9px] font-bold text-black">
+              Exclusive
+            </span>
           )}
-
-          <div className="text-[10px] text-[#555] mt-2 line-clamp-1">
-            {getSongRights(song)}
-          </div>
-
-          {isPlaying && (
-            <div className="flex items-end gap-[2px] h-4 mt-2">
-              {[0, 1, 2, 3].map((index) => (
-                <div
-                  key={index}
-                  className="waveform-bar w-[2px]"
-                  style={{
-                    animationDelay: `${index * 0.13}s`,
-                    height: '100%',
-                  }}
-                />
-              ))}
-            </div>
+          {song.hidden && (
+            <span className="rounded-full bg-[#222] px-2 py-1 text-[9px] font-bold text-[#bbb]">
+              Hidden
+            </span>
           )}
+        </div>
 
-          <div className="grid grid-cols-5 gap-1.5 mt-3">
+        <div className="absolute top-2 right-2 flex gap-1">
+          <button
+            onClick={onShare}
+            disabled={Boolean(song.no_sharing)}
+            className="w-8 h-8 rounded-full bg-black/70 border border-white/10 text-white hover:text-[#f5c518] disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+            title="Share"
+          >
+            <Share2 size={12} />
+          </button>
+        </div>
+
+        {isPlaying && (
+          <div className="absolute bottom-2 left-2 flex items-end gap-[2px] h-4">
+            {[0, 1, 2, 3].map((index) => (
+              <div
+                key={index}
+                className="waveform-bar w-[2px]"
+                style={{
+                  animationDelay: `${index * 0.13}s`,
+                  height: '100%',
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-3">
+        <div className="font-display font-800 text-[13px] text-white leading-tight line-clamp-2">
+          {song.title}
+        </div>
+
+        <div className="text-[10px] text-[#f5c518] mt-1">
+          {priceLabel}
+        </div>
+
+        <div className="text-[10px] text-[#777] mt-1 line-clamp-2 min-h-[28px]">
+          {song.description || PRODUCED_BY_INFO_DEFAULT}
+        </div>
+
+        <div className="text-[10px] text-[#555] mt-2 line-clamp-1">
+          {getSongRights(song)}
+        </div>
+
+        <div className="grid grid-cols-5 gap-1.5 mt-3">
             <button
               onClick={onPlay}
               className="py-2 rounded-xl bg-[#f5c518] text-black flex items-center justify-center"
@@ -527,6 +539,7 @@ function SongCard({
 
             <button
               onClick={onPurchase}
+              disabled={song.sold || (isBeatFree(song) && !song.release_download && !isAdmin)}
               className="py-2 rounded-xl bg-[#151515] border border-[#222] text-[#888] hover:text-[#f5c518] transition-all flex items-center justify-center"
               title="Purchase song"
             >
@@ -553,10 +566,10 @@ function SongCard({
             >
               <Share2 size={14} />
             </button>
-          </div>
+        </div>
 
-          {isAdmin && (
-            <div className="flex items-center gap-1.5 mt-2">
+        {isAdmin && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <button
                 onClick={onEdit}
                 className="px-3 py-1.5 rounded-xl bg-[#111] border border-[#222] text-[#f5c518] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
@@ -581,15 +594,8 @@ function SongCard({
                   Hidden
                 </span>
               )}
-
-              {song.exclusive && (
-                <span className="px-2 py-1 rounded-lg bg-[#f5c518]/10 border border-[#f5c518]/20 text-[#f5c518] text-[10px] uppercase">
-                  Exclusive
-                </span>
-              )}
             </div>
           )}
-        </div>
       </div>
     </div>
   );
@@ -597,25 +603,32 @@ function SongCard({
 
 export function SongUploadModal({
   song,
+  mode = 'prodby',
   onClose,
   onSave,
 }: {
   song: ProducedSong | null;
+  mode?: 'prodby' | 'credits';
   onClose: () => void;
   onSave: () => void;
 }) {
   const { addToast } = useApp();
+  const isCreditsMode = mode === 'credits';
+  const defaultCreditLine = PRODUCED_BY_INFO_DEFAULT;
 
   const [title, setTitle] = useState(song?.title || '');
   const [artistName, setArtistName] = useState(song?.artist_name || '');
-  const [description, setDescription] = useState(song?.description || '');
+  const [description, setDescription] = useState(song?.description || defaultCreditLine);
   const [rightsText, setRightsText] = useState(
-    song?.rights_text || PRODUCED_BY_INFO_DEFAULT
+    song?.rights_text || defaultCreditLine
   );
   const [audioUrl, setAudioUrl] = useState(song?.audio_file_url || '');
   const [coverUrl, setCoverUrl] = useState(song?.cover_art_url || '');
+  const [externalUrl, setExternalUrl] = useState(song?.external_url || '');
   const [price, setPrice] = useState(Number(song?.price || 250));
-  const [isFree, setIsFree] = useState(isExclusiveSong(song || {}) ? false : true);
+  const [isFree, setIsFree] = useState(
+    song ? isBeatFree(song) : isCreditsMode
+  );
   const [released, setReleased] = useState(Boolean(song?.release_download));
   const [exclusive, setExclusive] = useState(isExclusiveSong(song || {}));
   const [noSharing, setNoSharing] = useState(Boolean(song?.no_sharing));
@@ -690,7 +703,7 @@ export function SongUploadModal({
       setAudioUrl(result.url);
       addToast('Song audio uploaded.', 'success');
     } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Song audio upload failed. Paste a URL instead.', 'error');
+      addToast(error instanceof Error ? error.message : 'Song audio upload failed.', 'error');
     }
 
     setAudioUploading(false);
@@ -707,7 +720,7 @@ export function SongUploadModal({
       setCoverUrl(result.url);
       addToast('Song cover uploaded.', 'success');
     } catch {
-      addToast('Song cover upload failed. Paste a URL instead.', 'error');
+      addToast('Song cover upload failed.', 'error');
     }
 
     setCoverUploading(false);
@@ -716,6 +729,11 @@ export function SongUploadModal({
   const handleSave = async () => {
     if (!title.trim()) {
       addToast('Song title required.', 'error');
+      return;
+    }
+
+    if (isCreditsMode && !artistName.trim()) {
+      addToast('Artist name required for Credits.', 'error');
       return;
     }
 
@@ -728,24 +746,28 @@ export function SongUploadModal({
 
     const markerExclusive = isSongMarkedExclusiveByText({
       title,
-      artist_name: artistName,
+      artist_name: isCreditsMode ? artistName : '',
       description,
       rights_text: rightsText,
     });
     const shouldTreatAsExclusive = exclusive || markerExclusive;
-    const shouldBeFree = shouldTreatAsExclusive ? false : isFree;
+    const shouldBeFree = isCreditsMode ? isFree : shouldTreatAsExclusive ? false : isFree;
+    const cleanDescription = description.trim() || defaultCreditLine;
+    const cleanRightsText = rightsText.trim() || defaultCreditLine;
 
     const payload = {
       title: title.trim(),
-      artist_name: artistName.trim(),
-      description: description.trim(),
-      rights_text: rightsText.trim() || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : PRODUCED_BY_INFO_DEFAULT),
+      artist_name: isCreditsMode ? artistName.trim() : '',
+      description: cleanDescription,
+      rights_text: cleanRightsText || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : defaultCreditLine),
       audio_file_url: audioUrl.trim(),
       cover_art_url: coverUrl.trim(),
-      price: shouldTreatAsExclusive ? Number(price) || 250 : 0,
+      room_type: isCreditsMode ? 'credits' : 'prodby',
+      external_url: isCreditsMode ? externalUrl.trim() : '',
+      price: shouldTreatAsExclusive ? Number(price) || 250 : isCreditsMode ? Number(price) || 0 : 0,
       is_free: shouldBeFree,
-      release_download: shouldTreatAsExclusive ? released : true,
-      exclusive: shouldTreatAsExclusive,
+      release_download: shouldTreatAsExclusive ? released : isCreditsMode ? released : true,
+      exclusive: isCreditsMode ? false : shouldTreatAsExclusive,
       no_sharing: noSharing,
       admin_approved: true,
       hidden,
@@ -783,10 +805,10 @@ export function SongUploadModal({
         <div className="sticky top-0 z-10 bg-[#0d0d0d]/95 backdrop-blur-xl border-b border-[#1a1a1a] flex items-center justify-between px-4 py-3">
           <div>
             <div className="font-display font-900 text-white uppercase tracking-wide">
-              {song ? 'Edit Song' : 'New Song'}
+              {song ? (isCreditsMode ? 'Edit Credit' : 'Edit Song') : isCreditsMode ? 'New Credit' : 'New Song'}
             </div>
             <div className="text-[10px] text-[#666]">
-              Produced By room uses Song language only.
+              {isCreditsMode ? 'Credits can include artist info and an optional external link.' : 'Produced By uses media uploads only and keeps the Owner as the artist.'}
             </div>
           </div>
 
@@ -844,12 +866,18 @@ export function SongUploadModal({
                 className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
               />
 
-              <input
-                value={artistName}
-                onChange={(event) => setArtistName(event.target.value)}
-                placeholder="Artist name"
-                className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
-              />
+              {isCreditsMode ? (
+                <input
+                  value={artistName}
+                  onChange={(event) => setArtistName(event.target.value)}
+                  placeholder="Artist name"
+                  className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
+                />
+              ) : (
+                <div className="rounded-2xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-sm text-[#bdbdbd]">
+                  {defaultCreditLine}
+                </div>
+              )}
 
               <textarea
                 value={description}
@@ -862,13 +890,9 @@ export function SongUploadModal({
 
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_auto] gap-2">
-              <input
-                value={audioUrl}
-                onChange={(event) => setAudioUrl(event.target.value)}
-                placeholder="Song audio URL"
-                className="bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
-              />
-
+              <div className="rounded-2xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-sm text-[#bdbdbd] truncate">
+                {audioUrl ? 'Audio attached.' : 'Upload song audio.'}
+              </div>
               <button
                 onClick={() => audioInputRef.current?.click()}
                 disabled={audioUploading}
@@ -895,12 +919,9 @@ export function SongUploadModal({
             </div>
           )}
 
-          <input
-            value={coverUrl}
-            onChange={(event) => setCoverUrl(event.target.value)}
-            placeholder="Song cover URL"
-            className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
-          />
+          <div className="rounded-2xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-sm text-[#bdbdbd] truncate">
+            {coverUrl ? 'Cover attached.' : 'Upload cover art.'}
+          </div>
 
           <div className="rounded-2xl border border-[#222] bg-[#0d0d0d] p-3 space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -961,6 +982,15 @@ export function SongUploadModal({
             className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
           />
 
+          {isCreditsMode && (
+            <input
+              value={externalUrl}
+              onChange={(event) => setExternalUrl(event.target.value)}
+              placeholder="Optional external artist/song URL"
+              className="w-full bg-black border border-[#222] rounded-2xl px-4 py-3 text-white outline-none focus:border-[#f5c518]/45"
+            />
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <label className="space-y-1 col-span-2 sm:col-span-1">
               <span className="text-[10px] text-[#666] uppercase tracking-widest">
@@ -980,11 +1010,13 @@ export function SongUploadModal({
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <ToggleBox
-              label="Exclusive"
-              active={exclusive}
-              onClick={() => setExclusive(!exclusive)}
-            />
+            {!isCreditsMode && (
+              <ToggleBox
+                label="Exclusive"
+                active={exclusive}
+                onClick={() => setExclusive(!exclusive)}
+              />
+            )}
             <ToggleBox
               label="No Sharing"
               active={noSharing}

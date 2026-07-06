@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
+  ExternalLink,
   Pause,
   Play,
   Plus,
@@ -44,9 +45,9 @@ export function CreditsRoom() {
     const { data, error } = await supabase
       .from('prod_by_songs')
       .select('*')
+      .eq('room_type', 'credits')
       .eq('hidden', false)
       .eq('admin_approved', true)
-      .eq('exclusive', false)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -356,6 +357,16 @@ export function CreditsRoom() {
                 <Share2 size={15} />
                 Share
               </button>
+
+              {selectedCredit.external_url && (
+                <button
+                  onClick={() => window.open(selectedCredit.external_url, '_blank', 'noopener,noreferrer')}
+                  className="btn-dark py-3 rounded-2xl text-sm flex items-center justify-center gap-2 col-span-2"
+                >
+                  <ExternalLink size={15} />
+                  Open Artist Link
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -364,6 +375,7 @@ export function CreditsRoom() {
       {showUpload && (
         <SongUploadModal
           song={null}
+          mode="credits"
           onClose={() => setShowUpload(false)}
           onSave={async () => {
             setShowUpload(false);
