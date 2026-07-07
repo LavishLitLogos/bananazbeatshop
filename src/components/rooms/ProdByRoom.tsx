@@ -717,7 +717,9 @@ export function SongUploadModal({
       return;
     }
 
-    if (!audioUrl.trim()) {
+    const hasSongAudio = Boolean(audioFile) || Boolean(audioUrl.trim());
+
+    if (!hasSongAudio) {
       addToast('Song audio required.', 'error');
       return;
     }
@@ -917,7 +919,7 @@ export function SongUploadModal({
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <div className="rounded-2xl border border-[#222] bg-[#0f0f0f] px-4 py-3 text-sm text-[#bdbdbd] truncate">
-                {audioUrl ? 'Audio attached.' : 'Upload song audio.'}
+                {audioFile || audioUrl ? 'Audio attached.' : 'Upload song audio.'}
               </div>
               <button
                 onClick={() => audioInputRef.current?.click()}
