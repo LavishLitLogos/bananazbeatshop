@@ -291,11 +291,11 @@ function buildStoragePath(kind: UploadKind, file: File, mediaRole: string): stri
 }
 
 function publicUrlForPath(config: R2Config, storagePath: string): string {
-  if (config.publicBaseUrl) {
-    return `${config.publicBaseUrl}/${storagePath}`;
+  if (!config.publicBaseUrl) {
+    throw new Error('Missing required environment variable: R2_PUBLIC_URL');
   }
 
-  return `${config.endpoint}/${config.bucketName}/${storagePath}`;
+  return `${config.publicBaseUrl}/${storagePath}`;
 }
 
 async function putObjectToR2(params: {
