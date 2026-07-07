@@ -263,9 +263,19 @@ async function resolveBeatDownload(admin: ReturnType<typeof createAdminClient>, 
     }
   }
 
+  const { data: mediaAsset } = await admin
+    .from('media_assets')
+    .select('storage_path')
+    .eq('related_table', 'beats')
+    .eq('related_record_id', beat.id)
+    .in('media_role', ['tagged_download', 'preview'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return {
     fileName: `${beat.title || 'thisbeatizbananaz-beat'}.mp3`,
-    storagePath: extractStoragePathFromUrl(beat.audio_file_url || ''),
+    storagePath: mediaAsset?.storage_path || extractStoragePathFromUrl(beat.audio_file_url || ''),
   };
 }
 
@@ -288,9 +298,19 @@ async function resolveSongDownload(admin: ReturnType<typeof createAdminClient>, 
     throw new Error('Song download is still locked.');
   }
 
+  const { data: mediaAsset } = await admin
+    .from('media_assets')
+    .select('storage_path')
+    .eq('related_table', 'prod_by_songs')
+    .eq('related_record_id', song.id)
+    .in('media_role', ['tagged_download', 'preview'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return {
     fileName: `${song.title || 'thisbeatizbananaz-song'}.mp3`,
-    storagePath: extractStoragePathFromUrl(song.audio_file_url || ''),
+    storagePath: mediaAsset?.storage_path || extractStoragePathFromUrl(song.audio_file_url || ''),
   };
 }
 
@@ -342,9 +362,19 @@ async function resolveTapeTrackDownload(
     throw new Error(trackError?.message || 'Beat tape track not found.');
   }
 
+  const { data: mediaAsset } = await admin
+    .from('media_assets')
+    .select('storage_path')
+    .eq('related_table', 'beat_tape_tracks')
+    .eq('related_record_id', track.id)
+    .in('media_role', ['tagged_download', 'preview'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return {
     fileName: `${track.title || tape.title || 'thisbeatizbananaz-tape'}.mp3`,
-    storagePath: extractStoragePathFromUrl(track.audio_file_url || ''),
+    storagePath: mediaAsset?.storage_path || extractStoragePathFromUrl(track.audio_file_url || ''),
   };
 }
 

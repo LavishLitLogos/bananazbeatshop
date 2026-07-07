@@ -157,6 +157,10 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
       let coverUrl = form.cover_art_url.trim();
       let sourceAudioFile = audioFile;
 
+      if (tagEnabled && !tagFile) {
+        throw new Error('TAGNANAZ is on. Upload a beat tag file before saving.');
+      }
+
       if (tagEnabled && tagFile) {
         const placements = tagPlacements
           .split(',')
@@ -197,12 +201,12 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
           : Promise.resolve(null),
       ]);
 
-      if (audioResult?.publicUrl) {
-        audioUrl = audioResult.publicUrl;
+      if (audioResult?.publicUrl || audioResult?.url) {
+        audioUrl = audioResult.publicUrl || audioResult.url;
       }
 
-      if (coverResult?.publicUrl) {
-        coverUrl = coverResult.publicUrl;
+      if (coverResult?.publicUrl || coverResult?.url) {
+        coverUrl = coverResult.publicUrl || coverResult.url;
       }
 
       const isFree = Boolean(form.is_free);

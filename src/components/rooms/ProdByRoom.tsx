@@ -697,10 +697,10 @@ export function SongUploadModal({
         relatedTable: 'prod_by_songs',
         relatedId: song?.id,
       });
-      setCoverUrl(result.url);
+      setCoverUrl(result.publicUrl || result.url);
       addToast('Song cover uploaded.', 'success');
-    } catch {
-      addToast('Song cover upload failed.', 'error');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Song cover upload failed.', 'error');
     }
 
     setCoverUploading(false);
@@ -742,6 +742,10 @@ export function SongUploadModal({
       let finalAudioFile = audioFile;
       const finalCoverUrl = coverUrl.trim();
 
+      if (tagEnabled && !tagFile) {
+        throw new Error('TAGNANAZ is on. Upload a beat tag file before saving.');
+      }
+
       if (tagEnabled && tagFile) {
         const placements = tagPlacements
           .split(',')
@@ -774,9 +778,9 @@ export function SongUploadModal({
           })
         : null;
 
-      if (audioResult?.publicUrl) {
-        finalAudioUrl = audioResult.publicUrl;
-        setAudioUrl(audioResult.publicUrl);
+      if (audioResult?.publicUrl || audioResult?.url) {
+        finalAudioUrl = audioResult.publicUrl || audioResult.url;
+        setAudioUrl(finalAudioUrl);
       }
 
       const payload = {
@@ -1082,6 +1086,5 @@ function ToggleBox({
     </button>
   );
 }
-
 
 

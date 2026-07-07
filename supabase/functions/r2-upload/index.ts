@@ -26,7 +26,10 @@ type UploadResult = {
   ok: true;
   function: 'r2-upload';
   objectKey: string;
+  storagePath: string;
+  path: string;
   url: string;
+  publicUrl: string;
   record: string;
   contentType: string;
   size: number;
@@ -101,7 +104,7 @@ function getR2Config(): R2Config {
     accessKeyId: getRequiredEnv('R2_ACCESS_KEY_ID'),
     secretAccessKey: getRequiredEnv('R2_SECRET_ACCESS_KEY'),
     bucketName: getRequiredEnv('R2_BUCKET_NAME'),
-    publicBaseUrl: normalizeUrl(Deno.env.get('R2_PUBLIC_URL') || ''),
+    publicBaseUrl: normalizeUrl(getRequiredEnv('R2_PUBLIC_URL')),
   };
 }
 
@@ -188,6 +191,7 @@ function normalizeUploadKind(value: FormDataEntryValue | null): UploadKind {
 function validateFileType(kind: UploadKind, contentType: string, fileName: string): void {
   const normalizedType = String(contentType || '').toLowerCase().trim();
   const extension = getFileExtension(fileName);
+  const typeIsGeneric = !normalizedType || normalizedType === 'application/octet-stream';
 
   const audioExtensions = new Set(['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg']);
   const imageExtensions = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
@@ -195,7 +199,7 @@ function validateFileType(kind: UploadKind, contentType: string, fileName: strin
   const fileExtensions = new Set(['zip']);
 
   if (kind === 'audio') {
-    if (normalizedType.startsWith('audio/') || audioExtensions.has(extension)) return;
+    if ((!typeIsGeneric && normalizedType.startsWith('audio/')) || audioExtensions.has(extension)) return;
 
     throw new Error(
       `Invalid audio upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
@@ -203,7 +207,7 @@ function validateFileType(kind: UploadKind, contentType: string, fileName: strin
   }
 
   if (kind === 'image') {
-    if (normalizedType.startsWith('image/') || imageExtensions.has(extension)) return;
+    if ((!typeIsGeneric && normalizedType.startsWith('image/')) || imageExtensions.has(extension)) return;
 
     throw new Error(
       `Invalid image upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
@@ -211,7 +215,7 @@ function validateFileType(kind: UploadKind, contentType: string, fileName: strin
   }
 
   if (kind === 'video') {
-    if (normalizedType.startsWith('video/') || videoExtensions.has(extension)) return;
+    if ((!typeIsGeneric && normalizedType.startsWith('video/')) || videoExtensions.has(extension)) return;
 
     throw new Error(
       `Invalid video upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
@@ -291,10 +295,6 @@ function buildStoragePath(kind: UploadKind, file: File, mediaRole: string): stri
 }
 
 function publicUrlForPath(config: R2Config, storagePath: string): string {
-  if (!config.publicBaseUrl) {
-    throw new Error('Missing required environment variable: R2_PUBLIC_URL');
-  }
-
   return `${config.publicBaseUrl}/${storagePath}`;
 }
 
@@ -429,6 +429,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   let mediaRole = '';
   let relatedTable = '';
   let relatedRecordId = '';
+  let providedFilename = '';
 
   try {
     const parsedFile = formData.get('file');
@@ -437,16 +438,24 @@ Deno.serve(async (request: Request): Promise<Response> => {
     mediaRole = String(formData.get('role') || formData.get('mediaRole') || kind).trim() || kind;
     relatedTable = String(formData.get('relatedTable') || '').trim();
     relatedRecordId = String(formData.get('relatedId') || formData.get('beatId') || '').trim();
+    providedFilename = String(formData.get('filename') || '').trim();
 
     if (!(parsedFile instanceof File)) {
       throw new Error('Missing upload file.');
     }
 
+    const derivedFileName = providedFilename || parsedFile.name || 'upload';
     const contentType = parsedFile.type || 'application/octet-stream';
 
-    validateFileType(kind, contentType, parsedFile.name);
+    validateFileType(kind, contentType, derivedFileName);
 
-    fileEntry = parsedFile;
+    fileEntry =
+      derivedFileName !== parsedFile.name
+        ? new File([parsedFile], derivedFileName, {
+            type: parsedFile.type,
+            lastModified: parsedFile.lastModified,
+          })
+        : parsedFile;
   } catch (error) {
     return fail('validate_file', error, 400);
   }
@@ -513,7 +522,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
     ok: true,
     function: FUNCTION_NAME,
     objectKey: storagePath,
+    storagePath,
+    path: storagePath,
     url: publicUrl,
+    publicUrl,
     record: recordId,
     contentType,
     size: fileEntry.size,

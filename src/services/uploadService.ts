@@ -23,8 +23,8 @@ type EdgeUploadResponse = {
   objectKey?: string;
   url?: string;
   record?: string;
-  contentType: string;
-  size: number;
+  contentType?: string;
+  size?: number;
   publicUrl?: string;
   storagePath?: string;
   path?: string;
@@ -87,6 +87,7 @@ async function uploadViaR2Function(
   const formData = new FormData();
   formData.append('file', normalizedFile);
   formData.append('type', type);
+  formData.append('filename', normalizedFile.name);
 
   if (options.mediaRole) {
     formData.append('role', options.mediaRole);
@@ -111,7 +112,10 @@ async function uploadViaR2Function(
   }
 
   const response = data as EdgeUploadResponse | null;
-  if (!response?.ok || !response?.objectKey || !response?.url) {
+  const resolvedUrl = response?.publicUrl || response?.url;
+  const resolvedPath = response?.objectKey || response?.path || response?.storagePath;
+
+  if (!response?.ok || !resolvedPath || !resolvedUrl) {
     console.error(`[${functionName}] unexpected response`, {
       function: functionName,
       payloadType,
@@ -122,10 +126,10 @@ async function uploadViaR2Function(
   }
 
   return {
-    url: response.url,
-    publicUrl: response.url,
-    path: response.objectKey,
-    storagePath: response.objectKey,
+    url: resolvedUrl,
+    publicUrl: resolvedUrl,
+    path: resolvedPath,
+    storagePath: response?.storagePath || resolvedPath,
     contentType: response.contentType,
     size: response.size,
   };
