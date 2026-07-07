@@ -36,6 +36,7 @@ type UploadResult = {
 };
 
 const FUNCTION_NAME = 'r2-upload';
+const FALLBACK_R2_PUBLIC_URL = 'https://pub-19f9cd09f0ec4680b19baced6e0b4cb7.r2.dev';
 
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -104,7 +105,7 @@ function getR2Config(): R2Config {
     accessKeyId: getRequiredEnv('R2_ACCESS_KEY_ID'),
     secretAccessKey: getRequiredEnv('R2_SECRET_ACCESS_KEY'),
     bucketName: getRequiredEnv('R2_BUCKET_NAME'),
-    publicBaseUrl: normalizeUrl(getRequiredEnv('R2_PUBLIC_URL')),
+    publicBaseUrl: normalizeUrl(Deno.env.get('R2_PUBLIC_URL') || FALLBACK_R2_PUBLIC_URL),
   };
 }
 

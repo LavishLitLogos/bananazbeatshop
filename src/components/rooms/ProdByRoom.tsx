@@ -24,6 +24,7 @@ import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_I
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 import { isExclusiveSong, isSongMarkedExclusiveByText } from '../../utils/exclusiveSongs';
 import { renderTaggedAudio } from '../../utils/audioTagger';
+import { normalizeR2MediaUrl } from '../../utils/mediaUrl';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -34,7 +35,7 @@ const PROD_BY_ICON = '/assets/icons/skip-icon.png';
 type ProducedSong = ProdBySong;
 
 function getSongCover(song: ProducedSong) {
-  return song.cover_art_url || MAIN_LOGO;
+  return normalizeR2MediaUrl(song.cover_art_url) || MAIN_LOGO;
 }
 
 function getSongUrl(song: ProducedSong) {
@@ -87,7 +88,13 @@ export function ProdByRoom() {
       return;
     }
 
-    setSongs((data || []) as ProducedSong[]);
+    setSongs(
+      ((data || []) as ProducedSong[]).map((song) => ({
+        ...song,
+        audio_file_url: normalizeR2MediaUrl(song.audio_file_url),
+        cover_art_url: normalizeR2MediaUrl(song.cover_art_url),
+      }))
+    );
     setLoading(false);
   }, [addToast, isAdmin]);
 
@@ -626,8 +633,8 @@ export function SongUploadModal({
   const [rightsText, setRightsText] = useState(
     song?.rights_text || defaultCreditLine
   );
-  const [audioUrl, setAudioUrl] = useState(song?.audio_file_url || '');
-  const [coverUrl, setCoverUrl] = useState(song?.cover_art_url || '');
+  const [audioUrl, setAudioUrl] = useState(normalizeR2MediaUrl(song?.audio_file_url) || '');
+  const [coverUrl, setCoverUrl] = useState(normalizeR2MediaUrl(song?.cover_art_url) || '');
   const [price, setPrice] = useState(Number(song?.price || 250));
   const [isFree, setIsFree] = useState(
     song ? isBeatFree(song) : isCreditsMode
@@ -738,9 +745,9 @@ export function SongUploadModal({
       const cleanDescription = description.trim() || defaultCreditLine;
       const cleanRightsText = rightsText.trim() || defaultCreditLine;
 
-      let finalAudioUrl = audioUrl.trim();
+      let finalAudioUrl = normalizeR2MediaUrl(audioUrl).trim();
       let finalAudioFile = audioFile;
-      const finalCoverUrl = coverUrl.trim();
+      const finalCoverUrl = normalizeR2MediaUrl(coverUrl).trim();
 
       if (tagEnabled && !tagFile) {
         throw new Error('TAGNANAZ is on. Upload a beat tag file before saving.');
@@ -1086,5 +1093,4 @@ function ToggleBox({
     </button>
   );
 }
-
 

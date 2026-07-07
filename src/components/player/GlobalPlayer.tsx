@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useApp, useAudio } from '../../context/AppContext';
 import type { Beat } from '../../types';
-import { BRAND_NAME } from '../../utils/branding';
+import { BRAND_NAME, PRODUCED_BY_DISPLAY_DEFAULT } from '../../utils/branding';
 import { canBuyBeat, getBeatPriceLabel } from '../../utils/beatAccess';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { BuyModal } from '../modals/BuyModal';
@@ -31,8 +31,13 @@ function getCover(item: any) {
 }
 
 function getArtistLine(item: any) {
+  const isProducedBySong =
+    Boolean(item?.rights_text) ||
+    ('exclusive' in (item || {}) && !('genre' in (item || {})));
+
   return (
     item.artist_name ||
+    (isProducedBySong ? PRODUCED_BY_DISPLAY_DEFAULT : '') ||
     item.producer_name ||
     item.genre ||
     item.style ||

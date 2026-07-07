@@ -6,7 +6,7 @@ import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import { appStorage } from '../../services/appStorage';
 import type { Beat, ProdBySong, Room } from '../../types';
-import { BRAND_NAME } from '../../utils/branding';
+import { BRAND_NAME, PRODUCED_BY_DISPLAY_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 import { isExclusiveSong } from '../../utils/exclusiveSongs';
 import { FamzProfileModal } from '../modals/FamzProfileModal';
@@ -633,7 +633,7 @@ export function HomeRoom() {
                     </div>
 
                     <div className="text-[10px] text-[#888] truncate mt-0.5">
-                      {song.artist_name || 'Artist TBA'}
+                      {song.artist_name || PRODUCED_BY_DISPLAY_DEFAULT}
                     </div>
 
                     <div className="text-[10px] text-[#f5c518] mt-0.5">

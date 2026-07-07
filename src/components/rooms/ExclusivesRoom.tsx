@@ -13,7 +13,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
-import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE } from '../../utils/branding';
+import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_DISPLAY_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel } from '../../utils/beatAccess';
 import { isExclusiveSong } from '../../utils/exclusiveSongs';
 import { SongUploadModal } from './ProdByRoom';
@@ -272,7 +272,7 @@ export function ExclusivesRoom() {
                     </div>
 
                     <div className="text-[10px] text-[#f5c518] truncate mt-0.5">
-                      {song.artist_name || 'Artist TBA'}
+                      {song.artist_name || PRODUCED_BY_DISPLAY_DEFAULT}
                     </div>
 
                     <div className="text-[10px] text-white/80 truncate mt-0.5">
@@ -340,7 +340,7 @@ export function ExclusivesRoom() {
                   {selectedSong.title}
                 </div>
                 <div className="text-sm text-[#f5c518] mt-1">
-                  {selectedSong.artist_name || 'Artist TBA'}
+                  {selectedSong.artist_name || PRODUCED_BY_DISPLAY_DEFAULT}
                 </div>
                 <div className="text-xs text-white/75 mt-1">
                   {getBeatPriceLabel(selectedSong)}
