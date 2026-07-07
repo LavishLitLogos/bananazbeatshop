@@ -54,6 +54,12 @@ function responseJson(body: unknown, status = 200): Response {
 
 function fail(step: UploadStep, error: unknown, status = 400): Response {
   const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+
+  console.error(`[${FUNCTION_NAME}] ${step}`, {
+    step,
+    error: message,
+  });
+
   return responseJson(
     {
       ok: false,
@@ -105,6 +111,7 @@ function createAdminClient() {
     Deno.env.get('PROJECT_URL') ||
     Deno.env.get('SB_URL') ||
     '';
+
   const serviceRoleKey =
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ||
     Deno.env.get('SERVICE_ROLE_KEY') ||
@@ -128,48 +135,102 @@ function sanitizeFileName(fileName: string): string {
   return cleaned || 'upload';
 }
 
-function extensionFromMime(contentType: string): string {
+function getFileExtension(fileName: string): string {
+  const match = String(fileName || '').toLowerCase().match(/\.([a-z0-9]+)$/);
+  return match ? match[1] : '';
+}
+
+function extensionFromMime(contentType: string, fileName = ''): string {
+  const normalizedType = String(contentType || '').toLowerCase().trim();
+  const fileExtension = getFileExtension(fileName);
+
   const map: Record<string, string> = {
     'audio/mpeg': 'mp3',
     'audio/mp3': 'mp3',
     'audio/wav': 'wav',
     'audio/x-wav': 'wav',
+    'audio/wave': 'wav',
     'audio/aac': 'aac',
+    'audio/mp4': 'm4a',
+    'audio/x-m4a': 'm4a',
     'audio/ogg': 'ogg',
     'audio/flac': 'flac',
+    'audio/x-flac': 'flac',
+
     'image/jpeg': 'jpg',
     'image/jpg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
+
     'video/mp4': 'mp4',
     'video/webm': 'webm',
     'video/quicktime': 'mov',
+
     'application/zip': 'zip',
     'application/x-zip-compressed': 'zip',
   };
 
-  return map[contentType] || 'bin';
+  return map[normalizedType] || fileExtension || 'bin';
 }
 
 function normalizeUploadKind(value: FormDataEntryValue | null): UploadKind {
   const raw = String(value || '').toLowerCase().trim();
+
   if (raw === 'audio') return 'audio';
   if (raw === 'image' || raw === 'cover' || raw === 'artwork') return 'image';
   if (raw === 'video') return 'video';
   if (raw === 'file' || raw === 'zip' || raw === 'download') return 'file';
+
   throw new Error('Invalid upload type.');
 }
 
-function validateFileType(kind: UploadKind, contentType: string): void {
-  if (kind === 'audio' && !contentType.startsWith('audio/')) {
-    throw new Error('Invalid audio upload.');
+function validateFileType(kind: UploadKind, contentType: string, fileName: string): void {
+  const normalizedType = String(contentType || '').toLowerCase().trim();
+  const extension = getFileExtension(fileName);
+
+  const audioExtensions = new Set(['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg']);
+  const imageExtensions = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+  const videoExtensions = new Set(['mp4', 'mov', 'webm']);
+  const fileExtensions = new Set(['zip']);
+
+  if (kind === 'audio') {
+    if (normalizedType.startsWith('audio/') || audioExtensions.has(extension)) return;
+
+    throw new Error(
+      `Invalid audio upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
+    );
   }
-  if (kind === 'image' && !contentType.startsWith('image/')) {
-    throw new Error('Invalid image upload.');
+
+  if (kind === 'image') {
+    if (normalizedType.startsWith('image/') || imageExtensions.has(extension)) return;
+
+    throw new Error(
+      `Invalid image upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
+    );
   }
-  if (kind === 'video' && !contentType.startsWith('video/')) {
-    throw new Error('Invalid video upload.');
+
+  if (kind === 'video') {
+    if (normalizedType.startsWith('video/') || videoExtensions.has(extension)) return;
+
+    throw new Error(
+      `Invalid video upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
+    );
+  }
+
+  if (kind === 'file') {
+    if (
+      normalizedType === 'application/zip' ||
+      normalizedType === 'application/x-zip-compressed' ||
+      normalizedType === 'application/octet-stream' ||
+      fileExtensions.has(extension)
+    ) {
+      return;
+    }
+
+    throw new Error(
+      `Invalid file upload. MIME=${normalizedType || 'missing'}, extension=${extension || 'missing'}`,
+    );
   }
 }
 
@@ -220,11 +281,12 @@ function amzDateParts(now = new Date()): { amzDate: string; dateStamp: string } 
 function buildStoragePath(kind: UploadKind, file: File, mediaRole: string): string {
   const safeName = sanitizeFileName(file.name);
   const hasExtension = /\.[a-z0-9]+$/i.test(safeName);
-  const extension = extensionFromMime(file.type);
+  const extension = extensionFromMime(file.type, file.name);
   const finalName = hasExtension ? safeName : `${safeName}.${extension}`;
   const year = new Date().getFullYear();
   const uniqueId = crypto.randomUUID();
   const safeRole = sanitizeFileName(mediaRole || kind);
+
   return `${kind}/${safeRole}/${year}/${uniqueId}-${finalName}`;
 }
 
@@ -232,6 +294,7 @@ function publicUrlForPath(config: R2Config, storagePath: string): string {
   if (config.publicBaseUrl) {
     return `${config.publicBaseUrl}/${storagePath}`;
   }
+
   return `${config.endpoint}/${config.bucketName}/${storagePath}`;
 }
 
@@ -255,7 +318,9 @@ async function putObjectToR2(params: {
     `host:${config.host}\n` +
     `x-amz-content-sha256:${payloadHash}\n` +
     `x-amz-date:${amzDate}\n`;
+
   const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+
   const canonicalRequest = [
     method,
     `/${config.bucketName}/${encodedPath}`,
@@ -266,6 +331,7 @@ async function putObjectToR2(params: {
   ].join('\n');
 
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+
   const stringToSign = [
     'AWS4-HMAC-SHA256',
     amzDate,
@@ -275,6 +341,7 @@ async function putObjectToR2(params: {
 
   const signingKey = await getSigningKey(config.secretAccessKey, dateStamp, region, service);
   const signature = toHex(await hmacSha256(signingKey, stringToSign));
+
   const authorizationHeader =
     `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, ` +
     `SignedHeaders=${signedHeaders}, Signature=${signature}`;
@@ -292,7 +359,9 @@ async function putObjectToR2(params: {
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`Cloudflare R2 upload failed with status ${response.status}${errorText ? `: ${errorText}` : ''}`);
+    throw new Error(
+      `Cloudflare R2 upload failed with status ${response.status}${errorText ? `: ${errorText}` : ''}`,
+    );
   }
 }
 
@@ -309,6 +378,7 @@ async function saveMediaAsset(params: {
   originalFileName: string;
 }) {
   const adminClient = createAdminClient();
+
   const payload = {
     related_table: params.relatedTable,
     related_record_id: params.relatedRecordId,
@@ -347,6 +417,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   let formData: FormData;
+
   try {
     formData = await request.formData();
   } catch (error) {
@@ -361,17 +432,20 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   try {
     const parsedFile = formData.get('file');
+
     kind = normalizeUploadKind(formData.get('type'));
-    mediaRole = String(formData.get('role') || kind).trim() || kind;
+    mediaRole = String(formData.get('role') || formData.get('mediaRole') || kind).trim() || kind;
     relatedTable = String(formData.get('relatedTable') || '').trim();
-    relatedRecordId = String(formData.get('relatedId') || '').trim();
+    relatedRecordId = String(formData.get('relatedId') || formData.get('beatId') || '').trim();
 
     if (!(parsedFile instanceof File)) {
       throw new Error('Missing upload file.');
     }
 
     const contentType = parsedFile.type || 'application/octet-stream';
-    validateFileType(kind, contentType);
+
+    validateFileType(kind, contentType, parsedFile.name);
+
     fileEntry = parsedFile;
   } catch (error) {
     return fail('validate_file', error, 400);
@@ -386,6 +460,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   let config: R2Config;
+
   try {
     config = getR2Config();
   } catch (error) {
@@ -404,12 +479,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   try {
     const body = await fileEntry.arrayBuffer();
-    await putObjectToR2({ config, storagePath, contentType, body });
+
+    await putObjectToR2({
+      config,
+      storagePath,
+      contentType,
+      body,
+    });
   } catch (error) {
     return fail('upload_to_r2', error, 500);
   }
 
   let recordId = storagePath;
+
   try {
     recordId = await saveMediaAsset({
       relatedTable,
