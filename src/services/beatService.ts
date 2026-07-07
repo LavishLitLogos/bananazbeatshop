@@ -45,6 +45,81 @@ function cleanListValue(value?: string) {
     .join(', ');
 }
 
+type FlexiblePayload = Record<string, unknown>;
+
+function firstStringValue(payload: unknown, keys: string[]): string {
+  const source = payload && typeof payload === 'object' ? (payload as FlexiblePayload) : {};
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+}
+
+function resolveAudioFileUrl(payload: unknown): string {
+  return firstStringValue(payload, [
+    'audio_file_url',
+    'audioFileUrl',
+    'audio_url',
+    'audioUrl',
+    'preview_url',
+    'previewUrl',
+    'preview_audio_url',
+    'previewAudioUrl',
+    'publicUrl',
+    'url',
+  ]);
+}
+
+function resolveCoverArtUrl(payload: unknown): string {
+  return firstStringValue(payload, [
+    'cover_art_url',
+    'coverArtUrl',
+    'cover_url',
+    'coverUrl',
+    'artwork_url',
+    'artworkUrl',
+    'image_url',
+    'imageUrl',
+  ]);
+}
+
+function removeClientOnlyUploadAliases(payload: Record<string, unknown>) {
+  const aliases = [
+    'audioFileUrl',
+    'audio_url',
+    'audioUrl',
+    'preview_url',
+    'previewUrl',
+    'preview_audio_url',
+    'previewAudioUrl',
+    'coverArtUrl',
+    'cover_url',
+    'coverUrl',
+    'artwork_url',
+    'artworkUrl',
+    'image_url',
+    'imageUrl',
+    'publicUrl',
+    'url',
+    'path',
+    'storagePath',
+    'objectKey',
+    'r2Key',
+  ];
+
+  for (const alias of aliases) {
+    delete payload[alias];
+  }
+
+  return payload;
+}
+
 function applyBeatFilters(query: any, filters?: BeatRoomFilter) {
   let q = query;
 
@@ -154,8 +229,8 @@ export async function getBeatById(id: string) {
 export async function createBeat(payload: BeatPayload) {
   const insertData = {
     title: payload.title,
-    cover_art_url: payload.cover_art_url || null,
-    audio_file_url: payload.audio_file_url || null,
+    cover_art_url: resolveCoverArtUrl(payload) || null,
+    audio_file_url: resolveAudioFileUrl(payload) || null,
     price: payload.price ?? DEFAULT_BEAT_PRICE,
     is_free: payload.is_free ?? false,
     sold: payload.sold ?? false,
@@ -186,14 +261,25 @@ export async function createBeat(payload: BeatPayload) {
 }
 
 export async function updateBeat(id: string, payload: Partial<Beat>) {
-  const updateData = {
-    ...payload,
+  const updateData = removeClientOnlyUploadAliases({
+    ...(payload as Record<string, unknown>),
     style: cleanListValue(payload.style),
     vibe: cleanListValue(payload.vibe),
     genre: cleanListValue(payload.genre),
     type: cleanListValue(payload.type),
     updated_at: new Date().toISOString(),
-  };
+  });
+
+  const resolvedAudioFileUrl = resolveAudioFileUrl(payload);
+  const resolvedCoverArtUrl = resolveCoverArtUrl(payload);
+
+  if (resolvedAudioFileUrl) {
+    updateData.audio_file_url = resolvedAudioFileUrl;
+  }
+
+  if (resolvedCoverArtUrl) {
+    updateData.cover_art_url = resolvedCoverArtUrl;
+  }
 
   const { data, error } = await supabase
     .from('beats')
@@ -256,7 +342,7 @@ export async function createBeatTape(payload: BeatTapePayload) {
     .from('beat_tapes')
     .insert({
       title: tapeData.title,
-      cover_art_url: tapeData.cover_art_url || null,
+      cover_art_url: resolveCoverArtUrl(tapeData) || null,
       price: tapeData.price ?? 0,
       is_free: tapeData.is_free ?? false,
       colab_usable: tapeData.colab_usable ?? false,
@@ -272,7 +358,7 @@ export async function createBeatTape(payload: BeatTapePayload) {
     const trackRows = tracks.map((track, index) => ({
       tape_id: tape.id,
       title: track.title || `Track ${index + 1}`,
-      audio_file_url: track.audio_file_url || null,
+      audio_file_url: resolveAudioFileUrl(track) || null,
       track_order: track.track_order ?? index + 1,
     }));
 
@@ -287,12 +373,20 @@ export async function createBeatTape(payload: BeatTapePayload) {
 }
 
 export async function updateBeatTape(id: string, payload: Partial<BeatTape>) {
+  const updateData = removeClientOnlyUploadAliases({
+    ...(payload as Record<string, unknown>),
+    updated_at: new Date().toISOString(),
+  });
+
+  const resolvedCoverArtUrl = resolveCoverArtUrl(payload);
+
+  if (resolvedCoverArtUrl) {
+    updateData.cover_art_url = resolvedCoverArtUrl;
+  }
+
   const { data, error } = await supabase
     .from('beat_tapes')
-    .update({
-      ...payload,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();
@@ -328,8 +422,8 @@ export async function createProducedBySong(payload: ProdByPayload) {
     .insert({
       title: payload.title,
       artist_name: payload.artist_name || null,
-      audio_file_url: payload.audio_file_url || null,
-      cover_art_url: payload.cover_art_url || null,
+      audio_file_url: resolveAudioFileUrl(payload) || null,
+      cover_art_url: resolveCoverArtUrl(payload) || null,
       description: payload.description || null,
       rights_text:
         payload.rights_text ||
@@ -348,12 +442,25 @@ export async function updateProducedBySong(
   id: string,
   payload: Partial<ProdBySong>
 ) {
+  const updateData = removeClientOnlyUploadAliases({
+    ...(payload as Record<string, unknown>),
+    updated_at: new Date().toISOString(),
+  });
+
+  const resolvedAudioFileUrl = resolveAudioFileUrl(payload);
+  const resolvedCoverArtUrl = resolveCoverArtUrl(payload);
+
+  if (resolvedAudioFileUrl) {
+    updateData.audio_file_url = resolvedAudioFileUrl;
+  }
+
+  if (resolvedCoverArtUrl) {
+    updateData.cover_art_url = resolvedCoverArtUrl;
+  }
+
   const { data, error } = await supabase
     .from('prod_by_songs')
-    .update({
-      ...payload,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();
