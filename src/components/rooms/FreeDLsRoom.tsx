@@ -3,11 +3,12 @@ import { ChevronLeft, MoreHorizontal, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
+import { requestSignedDownload, triggerBrowserDownload } from '../../services/downloadService';
 import type { Beat } from '../../types';
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { ShareButton } from '../ui/ShareButton';
-import { isBeatInFreeDLs, triggerBeatDownload } from '../../utils/beatAccess';
+import { isBeatInFreeDLs } from '../../utils/beatAccess';
 
 export function FreeDLsRoom() {
   const { goBack, isAdmin, addToast } = useApp();
@@ -83,8 +84,14 @@ export function FreeDLsRoom() {
       return;
     }
 
-    if (!triggerBeatDownload(pendingBeat, isAdmin)) {
-      addToast('Download is locked until admin releases it.', 'info');
+    try {
+      const signed = await requestSignedDownload({
+        entityType: 'beat',
+        entityId: pendingBeat.id,
+      });
+      triggerBrowserDownload(signed.url, signed.fileName || `${pendingBeat.title}.mp3`);
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Download is locked until admin releases it.', 'info');
       setShowFreeDLMsg(false);
       setPendingBeat(null);
       return;

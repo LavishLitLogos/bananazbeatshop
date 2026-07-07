@@ -19,6 +19,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
+import { requestSignedDownload, triggerBrowserDownload } from '../../services/downloadService';
 import type { BeatTape, BeatTapeTrack } from '../../types';
 import { BRAND_NAME } from '../../utils/branding';
 import { renderTaggedAudio } from '../../utils/audioTagger';
@@ -258,7 +259,7 @@ export function BeatTapesRoom() {
     addToast('Order request sent. Download stays locked until release.', 'success');
   };
 
-  const handleDownloadTape = (tape: TapeWithTracks) => {
+  const handleDownloadTape = async (tape: TapeWithTracks) => {
     const releaseAllowed = Boolean((tape as any).release_download) || tape.is_free || isAdmin;
 
     if (!releaseAllowed) {
@@ -273,13 +274,17 @@ export function BeatTapesRoom() {
       return;
     }
 
-    const anchor = document.createElement('a');
-    anchor.href = firstTrack.audio_file_url;
-    anchor.download = `${tape.title || 'thisbeatizbanaz-tape'}.mp3`;
-    anchor.rel = 'noopener';
-    anchor.click();
-
-    addToast('Download started.', 'success');
+    try {
+      const signed = await requestSignedDownload({
+        entityType: 'beat_tape_track',
+        entityId: firstTrack.id,
+        parentTapeId: tape.id,
+      });
+      triggerBrowserDownload(signed.url, signed.fileName || `${tape.title || 'thisbeatizbanaz-tape'}.mp3`);
+      addToast('Download started.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Tape download failed.', 'error');
+    }
   };
 
   const handleEditTape = (tape: TapeWithTracks) => {
@@ -771,7 +776,11 @@ function TapeUploadModal({
     setCoverUploading(true);
 
     try {
-      const result = await uploadCoverArt(file);
+      const result = await uploadCoverArt(file, {
+        mediaRole: 'cover_art',
+        relatedTable: 'beat_tapes',
+        relatedId: tape?.id,
+      });
       setCoverUrl(result.url);
       addToast('Cover uploaded.', 'success');
     } catch {
@@ -797,7 +806,11 @@ function TapeUploadModal({
     try {
       const nextTitle = tracks[index]?.title || file.name.replace(/\.[^/.]+$/, '');
       const preparedFile = await applyTagIfNeeded(file, nextTitle);
-      const result = await uploadAudio(preparedFile);
+      const result = await uploadAudio(preparedFile, {
+        mediaRole: tagEnabled ? 'tagged_download' : 'preview',
+        relatedTable: 'beat_tape_tracks',
+        relatedId: tape?.id,
+      });
 
       setTracks((currentTracks) =>
         currentTracks.map((track, trackIndex) =>
@@ -1240,7 +1253,13 @@ function TapeUploadModal({
                       )
                     );
                     const uploadResults = await Promise.all(
-                      preparedFiles.map((file) => uploadAudio(file))
+                      preparedFiles.map((file) =>
+                        uploadAudio(file, {
+                          mediaRole: tagEnabled ? 'tagged_download' : 'preview',
+                          relatedTable: 'beat_tape_tracks',
+                          relatedId: tape?.id,
+                        })
+                      )
                     );
                     setTracks(
                       files.map((file, index) => ({

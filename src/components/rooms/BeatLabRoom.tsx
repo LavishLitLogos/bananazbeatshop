@@ -18,12 +18,13 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
+import { requestSignedDownload, triggerBrowserDownload } from '../../services/downloadService';
 import type { Beat } from '../../types';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BuyModal } from '../modals/BuyModal';
 import { ShareButton } from '../ui/ShareButton';
-import { canBuyBeat, canDownloadBeat, getBeatPriceLabel, isBeatFree, isBeatInBeatLab, triggerBeatDownload } from '../../utils/beatAccess';
+import { canBuyBeat, canDownloadBeat, getBeatPriceLabel, isBeatFree, isBeatInBeatLab } from '../../utils/beatAccess';
 import { BRAND_NAME } from '../../utils/branding';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -431,7 +432,7 @@ export function BeatLabRoom() {
     setShowDetail(true);
   };
 
-  const handleFreeDL = (beat: Beat) => {
+  const handleFreeDL = async (beat: Beat) => {
     if (!beat.audio_file_url) {
       addToast('No audio available.', 'error');
       return;
@@ -442,12 +443,16 @@ export function BeatLabRoom() {
       return;
     }
 
-    if (!triggerBeatDownload(beat, isAdmin)) {
-      addToast('Download locked until release is approved.', 'info');
-      return;
+    try {
+      const signed = await requestSignedDownload({
+        entityType: 'beat',
+        entityId: beat.id,
+      });
+      triggerBrowserDownload(signed.url, signed.fileName || `${beat.title}.mp3`);
+      addToast('Download started.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Download locked until release is approved.', 'info');
     }
-
-    addToast('Download started.', 'success');
   };
 
   const handleEdit = (beat: Beat) => {

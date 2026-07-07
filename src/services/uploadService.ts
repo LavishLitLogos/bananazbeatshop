@@ -5,9 +5,25 @@ export type UploadResult = {
   publicUrl: string;
   path: string;
   storagePath: string;
+  contentType?: string;
+  size?: number;
 };
 
-type UploadBucket = 'beat-audio' | 'cover-art' | 'profile-media' | 'submissions' | 'videos' | 'bananaz-room';
+export type UploadOptions = {
+  mediaRole?: string;
+  relatedTable?: string;
+  relatedId?: string;
+};
+
+type UploadKind = 'audio' | 'image' | 'video' | 'file';
+
+type EdgeUploadResponse = {
+  publicUrl: string;
+  storagePath: string;
+  path: string;
+  contentType: string;
+  size: number;
+};
 
 function normalizeContentType(file: File) {
   const rawType = String(file.type || '').toLowerCase().trim();
@@ -20,80 +36,103 @@ function normalizeContentType(file: File) {
   return rawType;
 }
 
-function cleanFileName(name: string) {
-  const extension = name.split('.').pop()?.toLowerCase() || 'file';
-  const base = name
-    .replace(/\.[^/.]+$/, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
+async function uploadViaR2Function(
+  file: File,
+  type: UploadKind,
+  options: UploadOptions = {},
+): Promise<UploadResult> {
+  const normalizedType = normalizeContentType(file);
+  const normalizedFile =
+    normalizedType && normalizedType !== file.type
+      ? new File([file], file.name, {
+          type: normalizedType,
+          lastModified: file.lastModified,
+        })
+      : file;
 
-  return `${base || 'upload'}-${Date.now()}.${extension}`;
-}
+  const formData = new FormData();
+  formData.append('file', normalizedFile);
+  formData.append('type', type);
 
-async function uploadToBucket(file: File, bucket: UploadBucket, folder = ''): Promise<UploadResult> {
-  const fileName = cleanFileName(file.name);
-  const storagePath = folder ? `${folder}/${fileName}` : fileName;
-  const contentType = normalizeContentType(file);
-
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(storagePath, file, {
-      cacheControl: '31536000',
-      upsert: false,
-      contentType,
-    });
-
-  if (error) {
-    throw new Error(error.message || `Upload failed in ${bucket}.`);
+  if (options.mediaRole) {
+    formData.append('role', options.mediaRole);
   }
 
-  const savedPath = data?.path || storagePath;
+  if (options.relatedTable) {
+    formData.append('relatedTable', options.relatedTable);
+  }
 
-  const { data: publicData } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(savedPath);
+  if (options.relatedId) {
+    formData.append('relatedId', options.relatedId);
+  }
 
-  const publicUrl = publicData?.publicUrl;
+  const { data, error } = await supabase.functions.invoke('r2-upload', {
+    body: formData,
+  });
 
-  if (!publicUrl) {
-    throw new Error(`Upload saved in ${bucket}, but no public URL returned.`);
+  if (error) {
+    throw new Error(error.message || 'R2 upload failed.');
+  }
+
+  const response = data as EdgeUploadResponse | null;
+  if (!response?.publicUrl || !response.storagePath) {
+    throw new Error('R2 upload succeeded, but no storage path was returned.');
   }
 
   return {
-    url: publicUrl,
-    publicUrl,
-    path: savedPath,
-    storagePath: savedPath,
+    url: response.publicUrl,
+    publicUrl: response.publicUrl,
+    path: response.storagePath,
+    storagePath: response.storagePath,
+    contentType: response.contentType,
+    size: response.size,
   };
 }
 
-export function uploadAudio(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'beat-audio', 'audio');
+export function uploadAudio(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+  return uploadViaR2Function(file, 'audio', {
+    mediaRole: options.mediaRole || 'preview',
+    relatedTable: options.relatedTable,
+    relatedId: options.relatedId,
+  });
 }
 
-export function uploadCoverArt(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'cover-art', 'covers');
+export function uploadCoverArt(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+  return uploadViaR2Function(file, 'image', {
+    mediaRole: options.mediaRole || 'cover_art',
+    relatedTable: options.relatedTable,
+    relatedId: options.relatedId,
+  });
 }
 
-export function uploadProfileMedia(file: File): Promise<UploadResult> {
-  const bucket = file.type.startsWith('video/') ? 'videos' : 'profile-media';
-  return uploadToBucket(file, bucket);
+export function uploadProfileMedia(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+  return uploadViaR2Function(file, file.type.startsWith('video/') ? 'video' : 'image', {
+    mediaRole: options.mediaRole || (file.type.startsWith('video/') ? 'profile_video' : 'profile_media'),
+    relatedTable: options.relatedTable,
+    relatedId: options.relatedId,
+  });
 }
 
-export function uploadSubmissionFile(file: File): Promise<UploadResult> {
-  return uploadToBucket(file, 'submissions');
+export function uploadSubmissionFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+  return uploadViaR2Function(file, file.type.startsWith('audio/') ? 'audio' : 'file', {
+    mediaRole: options.mediaRole || 'submission_file',
+    relatedTable: options.relatedTable,
+    relatedId: options.relatedId,
+  });
 }
 
-export function uploadBananazRoomFile(file: File): Promise<UploadResult> {
-  const folder = file.type.startsWith('audio/')
+export function uploadBananazRoomFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+  const type: UploadKind = file.type.startsWith('audio/')
     ? 'audio'
     : file.type.startsWith('image/')
-      ? 'images'
+      ? 'image'
       : file.type.startsWith('video/')
         ? 'video'
-        : 'files';
+        : 'file';
 
-  return uploadToBucket(file, 'bananaz-room', folder);
+  return uploadViaR2Function(file, type, {
+    mediaRole: options.mediaRole || 'bananaz_room',
+    relatedTable: options.relatedTable,
+    relatedId: options.relatedId,
+  });
 }

@@ -158,6 +158,8 @@ export function BananazRoom() {
   const { goBack, isAdmin, addToast } = useApp();
   const audio = useAudio();
   const freeCanvasRef = useRef<HTMLDivElement | null>(null);
+  const dragMovedRef = useRef(false);
+  const itemsRef = useRef<BananazRoomItem[]>(readFallbackState().items);
   const [layoutMode, setLayoutModeState] = useState<LayoutMode>(readFallbackState().layoutMode);
   const [items, setItems] = useState<BananazRoomItem[]>(() => readFallbackState().items);
   const [loading, setLoading] = useState(true);
@@ -165,7 +167,12 @@ export function BananazRoom() {
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BananazRoomItem | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [draggingState, setDraggingState] = useState<{
+    itemId: string;
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
 
   const syncFallback = useCallback((nextLayoutMode: LayoutMode, nextItems: BananazRoomItem[]) => {
     writeFallbackState(nextLayoutMode, nextItems);
@@ -350,48 +357,85 @@ export function BananazRoom() {
   };
 
   const updateItemsState = (nextItems: BananazRoomItem[]) => {
+    itemsRef.current = nextItems;
     setItems(nextItems);
     syncFallback(layoutMode, nextItems);
   };
 
-  const beginDrag = (itemId: string) => {
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  const beginDrag = (event: React.PointerEvent<HTMLButtonElement>, itemId: string) => {
     if (!isAdmin || layoutMode !== 'free') return;
-    setDraggingId(itemId);
+
+    const item = items.find((entry) => entry.id === itemId);
+    const rect = freeCanvasRef.current?.getBoundingClientRect();
+    if (!item || !rect) return;
+
+    dragMovedRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDraggingState({
+      itemId,
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left - item.x,
+      offsetY: event.clientY - rect.top - item.y,
+    });
   };
 
-  const handleCanvasPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!draggingId || !freeCanvasRef.current) return;
+  useEffect(() => {
+    if (!draggingState) return;
 
-    const rect = freeCanvasRef.current.getBoundingClientRect();
-    const x = Math.max(0, event.clientX - rect.left - 80);
-    const y = Math.max(0, event.clientY - rect.top - 80);
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!freeCanvasRef.current || event.pointerId !== draggingState.pointerId) return;
 
-    updateItemsState(
-      items.map((item) => (item.id === draggingId ? { ...item, x, y } : item))
-    );
-  };
+      const rect = freeCanvasRef.current.getBoundingClientRect();
+      const x = Math.max(0, event.clientX - rect.left - draggingState.offsetX);
+      const y = Math.max(0, event.clientY - rect.top - draggingState.offsetY);
+      dragMovedRef.current = true;
 
-  const endDrag = async () => {
-    if (!draggingId) return;
+      setItems((currentItems) => {
+        const nextItems = currentItems.map((item) => (
+          item.id === draggingState.itemId ? { ...item, x, y } : item
+        ));
+        itemsRef.current = nextItems;
+        syncFallback(layoutMode, nextItems);
+        return nextItems;
+      });
+    };
 
-    const draggedItem = items.find((item) => item.id === draggingId);
-    setDraggingId(null);
+    const handlePointerUp = async (event: PointerEvent) => {
+      if (event.pointerId !== draggingState.pointerId) return;
 
-    if (!draggedItem || usingFallback) return;
+      const draggedItem = itemsRef.current.find((item) => item.id === draggingState.itemId);
+      setDraggingState(null);
 
-    const { error } = await supabase
-      .from('bananaz_room_items')
-      .update({
-        position_x: draggedItem.x,
-        position_y: draggedItem.y,
-      })
-      .eq('id', draggedItem.id);
+      if (!draggedItem || usingFallback) return;
 
-    if (error) {
-      addToast('Position save failed. Keeping your local room setup.', 'error');
-      setUsingFallback(true);
-    }
-  };
+      const { error } = await supabase
+        .from('bananaz_room_items')
+        .update({
+          position_x: draggedItem.x,
+          position_y: draggedItem.y,
+        })
+        .eq('id', draggedItem.id);
+
+      if (error) {
+        addToast('Position save failed. Keeping your local room setup.', 'error');
+        setUsingFallback(true);
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [addToast, draggingState, layoutMode, syncFallback, usingFallback]);
 
   const handleSaveUpload = async (draft: UploadDraft) => {
     const x = 24 + items.length * 12;
@@ -485,9 +529,6 @@ export function BananazRoom() {
         ) : layoutMode === 'free' ? (
           <div
             ref={freeCanvasRef}
-            onPointerMove={handleCanvasPointerMove}
-            onPointerUp={endDrag}
-            onPointerLeave={endDrag}
             className="relative min-h-[72vh] rounded-[2rem] border border-[#1d1d1d] bg-[#0f0f0f] overflow-hidden"
           >
             {visibleItems.length === 0 ? (
@@ -500,8 +541,14 @@ export function BananazRoom() {
                   key={item.id}
                   id={`bananaz-room-${item.id}`}
                   type="button"
-                  onMouseDown={() => beginDrag(item.id)}
-                  onClick={() => setSelectedItem(item)}
+                  onPointerDown={(event) => beginDrag(event, item.id)}
+                  onClick={() => {
+                    if (dragMovedRef.current) {
+                      dragMovedRef.current = false;
+                      return;
+                    }
+                    setSelectedItem(item);
+                  }}
                   className="absolute w-40 overflow-hidden rounded-2xl border border-[#1e1e1e] bg-[#111] text-left shadow-[0_12px_28px_rgba(0,0,0,0.28)]"
                   style={{ left: item.x, top: item.y }}
                 >
@@ -736,19 +783,22 @@ function BananazRoomUploadModal({
       const kind = inferMediaKind(file);
       setMediaType(kind);
 
-      const uploaded = await uploadBananazRoomFile(file);
+      const uploaded = await uploadBananazRoomFile(file, {
+        mediaRole: 'bananaz_room',
+        relatedTable: 'bananaz_room_items',
+      });
       setUrl(uploaded.url);
 
       if (kind !== 'audio') {
         setPreviewImage(uploaded.url);
       }
 
-      addToast('Bananaz Room file uploaded to its bucket.', 'success');
+      addToast('Bananaz Room file uploaded.', 'success');
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'Bananaz Room upload failed. Check the bananaz-room bucket.';
+          : 'Bananaz Room upload failed.';
       setUploadError(message);
       addToast(message, 'error');
     }
@@ -796,7 +846,7 @@ function BananazRoomUploadModal({
               New Bananaz Room Drop
             </div>
             <div className="text-[10px] text-[#666]">
-              Dedicated bucket: bananaz-room
+              Media uploads save through secure storage.
             </div>
           </div>
 

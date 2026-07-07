@@ -51,7 +51,6 @@ export function HomeRoom() {
     setCartOpen,
     unreadCount,
     addToast,
-    triggerBananazSplash,
   } = useApp();
 
   const admin = useAdmin();
@@ -71,6 +70,7 @@ export function HomeRoom() {
   const [famzCount, setFamzCount] = useState(() => appStorage.getAdminSettings().famzCount);
   const pwaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tileRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [linkingTileId, setLinkingTileId] = useState<string | null>(null);
   const [linkDirection, setLinkDirection] = useState<LinkDirection>('right');
@@ -180,6 +180,10 @@ export function HomeRoom() {
       if (roomEnterTimerRef.current) {
         clearTimeout(roomEnterTimerRef.current);
       }
+
+      if (logoTapTimerRef.current) {
+        clearTimeout(logoTapTimerRef.current);
+      }
     };
   }, []);
 
@@ -195,11 +199,15 @@ export function HomeRoom() {
 
   const handleLogoTap = () => {
     setLogoBurst(true);
-    triggerBananazSplash();
 
-    setTimeout(() => {
+    if (logoTapTimerRef.current) {
+      clearTimeout(logoTapTimerRef.current);
+    }
+
+    logoTapTimerRef.current = setTimeout(() => {
       setLogoBurst(false);
-    }, 700);
+      logoTapTimerRef.current = null;
+    }, 1200);
   };
 
   const handleShare = async () => {
@@ -285,7 +293,6 @@ export function HomeRoom() {
     }
 
     if (prevStep === 'second-code') {
-      triggerBananazSplash();
       setShowWelcomeAdmin(true);
       setTimeout(() => {
         setShowWelcomeAdmin(false);
@@ -450,7 +457,7 @@ export function HomeRoom() {
         <button
           onClick={handleLogoTap}
           className={`transition-all ${
-            logoBurst ? 'animate-logo-burst' : 'animate-float'
+            logoBurst ? 'animate-logo-tap-cycle' : 'animate-float'
           }`}
         >
           <img
@@ -477,7 +484,9 @@ export function HomeRoom() {
         </div>
 
         <div className="text-xs text-[#666] mt-1">
+          <span className="text-[#aaaaaa]">
           {totalBeats} beats available
+          </span>
         </div>
 
         <button

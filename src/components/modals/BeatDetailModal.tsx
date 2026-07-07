@@ -15,9 +15,10 @@
 import { useState } from 'react';
 import { useApp, useAudio } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
+import { requestSignedDownload, triggerBrowserDownload } from '../../services/downloadService';
 import type { Beat } from '../../types';
 import { BEAT_INFO_DEFAULT, BRAND_NAME } from '../../utils/branding';
-import { canBuyBeat, canDownloadBeat, DEFAULT_BEAT_PRICE, getBeatPriceLabel, getBeatPriceValue, isBeatFree, triggerBeatDownload } from '../../utils/beatAccess';
+import { canBuyBeat, canDownloadBeat, DEFAULT_BEAT_PRICE, getBeatPriceLabel, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
 import { ShareButton } from '../ui/ShareButton';
 
 interface BeatDetailModalProps {
@@ -154,7 +155,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
     audio.playQueue(allBeats, currentIndex + 1, false);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!beat.audio_file_url) {
       addToast('No download file is available.', 'error');
       return;
@@ -165,12 +166,16 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
       return;
     }
 
-    if (!triggerBeatDownload(beat, isAdmin)) {
-      addToast('Download is locked until admin releases it.', 'info');
-      return;
+    try {
+      const signed = await requestSignedDownload({
+        entityType: 'beat',
+        entityId: beat.id,
+      });
+      triggerBrowserDownload(signed.url, signed.fileName || `${beat.title}.mp3`);
+      addToast('Download started.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Download is locked until admin releases it.', 'info');
     }
-
-    addToast('Download started.', 'success');
   };
 
   const handleAddToBeatBox = () => {

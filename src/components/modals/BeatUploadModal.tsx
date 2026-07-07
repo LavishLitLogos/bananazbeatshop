@@ -181,8 +181,20 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
       }
 
       const [audioResult, coverResult] = await Promise.all([
-        sourceAudioFile ? uploadAudio(sourceAudioFile) : Promise.resolve(null),
-        coverFile ? uploadCoverArt(coverFile) : Promise.resolve(null),
+        sourceAudioFile
+          ? uploadAudio(sourceAudioFile, {
+              mediaRole: tagEnabled ? 'tagged_download' : 'preview',
+              relatedTable: 'beats',
+              relatedId: beat?.id,
+            })
+          : Promise.resolve(null),
+        coverFile
+          ? uploadCoverArt(coverFile, {
+              mediaRole: 'cover_art',
+              relatedTable: 'beats',
+              relatedId: beat?.id,
+            })
+          : Promise.resolve(null),
       ]);
 
       if (audioResult?.publicUrl) {

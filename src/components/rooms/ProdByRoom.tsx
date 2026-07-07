@@ -18,6 +18,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
+import { requestSignedDownload, triggerBrowserDownload } from '../../services/downloadService';
 import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
@@ -29,7 +30,7 @@ import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PROD_BY_ICON = '/assets/icons/skip-icon.png';
 
-// ProdBySong now has all required fields on the base interface â€” no local extension needed
+// ProdBySong now has all required fields on the base interface.
 type ProducedSong = ProdBySong;
 
 function getSongCover(song: ProducedSong) {
@@ -192,7 +193,7 @@ export function ProdByRoom() {
     addToast('Song order request sent. Download stays locked until release.', 'success');
   };
 
-  const handleDownloadSong = (song: ProducedSong) => {
+  const handleDownloadSong = async (song: ProducedSong) => {
     const releaseAllowed = Boolean(song.release_download) || Boolean(song.is_free) || isAdmin;
 
     if (!releaseAllowed) {
@@ -205,13 +206,16 @@ export function ProdByRoom() {
       return;
     }
 
-    const anchor = document.createElement('a');
-    anchor.href = song.audio_file_url;
-    anchor.download = `${song.title || 'thisbeatizbananaz-song'}.mp3`;
-    anchor.rel = 'noopener';
-    anchor.click();
-
-    addToast('Song download started.', 'success');
+    try {
+      const signed = await requestSignedDownload({
+        entityType: 'prod_by_song',
+        entityId: song.id,
+      });
+      triggerBrowserDownload(signed.url, signed.fileName || `${song.title || 'thisbeatizbananaz-song'}.mp3`);
+      addToast('Song download started.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Song download failed.', 'error');
+    }
   };
 
   const handleEditSong = (song: ProducedSong) => {
@@ -633,7 +637,6 @@ export function SongUploadModal({
   const [noSharing, setNoSharing] = useState(Boolean(song?.no_sharing));
   const [hidden, setHidden] = useState(Boolean(song?.hidden));
   const [saving, setSaving] = useState(false);
-  const [audioUploading, setAudioUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
@@ -641,8 +644,6 @@ export function SongUploadModal({
   const [tagFile, setTagFile] = useState<File | null>(null);
   const [tagPreviewUrl, setTagPreviewUrl] = useState('');
   const [tagPlacements, setTagPlacements] = useState('');
-  const [tagAppliedToCurrentAudio, setTagAppliedToCurrentAudio] = useState(false);
-
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -672,11 +673,8 @@ export function SongUploadModal({
 
   useEffect(() => {
     if (!tagEnabled) {
-      setTagAppliedToCurrentAudio(false);
       return;
     }
-
-    setTagAppliedToCurrentAudio(false);
   }, [tagEnabled, tagFile, tagPlacements]);
 
   const handleAudioFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -684,40 +682,7 @@ export function SongUploadModal({
     if (!file) return;
 
     setAudioFile(file);
-    setTagAppliedToCurrentAudio(false);
-    setAudioUploading(true);
-
-    try {
-      let uploadFile = file;
-
-      if (tagEnabled && tagFile) {
-        const placements = tagPlacements
-          .split(',')
-          .map((value) => Number(value.trim()))
-          .filter((value) => Number.isFinite(value) && value >= 0);
-
-        if (placements.length === 0) {
-          throw new Error('TAGNANAZ needs at least one placement time in seconds.');
-        }
-
-        uploadFile = await renderTaggedAudio(
-          file,
-          tagFile,
-          placements,
-          title.trim() || file.name
-        );
-        setAudioFile(uploadFile);
-        setTagAppliedToCurrentAudio(true);
-      }
-
-      const result = await uploadAudio(uploadFile);
-      setAudioUrl(result.url);
-      addToast('Song audio uploaded.', 'success');
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Song audio upload failed.', 'error');
-    }
-
-    setAudioUploading(false);
+    setAudioUrl('');
   };
 
   const handleCoverFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -727,7 +692,11 @@ export function SongUploadModal({
     setCoverUploading(true);
 
     try {
-      const result = await uploadCoverArt(file);
+      const result = await uploadCoverArt(file, {
+        mediaRole: 'cover_art',
+        relatedTable: 'prod_by_songs',
+        relatedId: song?.id,
+      });
       setCoverUrl(result.url);
       addToast('Song cover uploaded.', 'success');
     } catch {
@@ -755,94 +724,105 @@ export function SongUploadModal({
 
     setSaving(true);
 
-    const markerExclusive = isSongMarkedExclusiveByText({
-      title,
-      artist_name: isCreditsMode ? artistName : '',
-      description,
-      rights_text: rightsText,
-    });
-    const shouldTreatAsExclusive = exclusive || markerExclusive;
-    const shouldBeFree = isCreditsMode ? isFree : shouldTreatAsExclusive ? false : isFree;
-    const cleanDescription = description.trim() || defaultCreditLine;
-    const cleanRightsText = rightsText.trim() || defaultCreditLine;
+    try {
+      const markerExclusive = isSongMarkedExclusiveByText({
+        title,
+        artist_name: isCreditsMode ? artistName : '',
+        description,
+        rights_text: rightsText,
+      });
+      const shouldTreatAsExclusive = exclusive || markerExclusive;
+      const shouldBeFree = isCreditsMode ? isFree : shouldTreatAsExclusive ? false : isFree;
+      const cleanDescription = description.trim() || defaultCreditLine;
+      const cleanRightsText = rightsText.trim() || defaultCreditLine;
 
-    let finalAudioUrl = audioUrl.trim();
-    let finalAudioFile = audioFile;
+      let finalAudioUrl = audioUrl.trim();
+      let finalAudioFile = audioFile;
+      const finalCoverUrl = coverUrl.trim();
 
-    if (tagEnabled && tagFile && !tagAppliedToCurrentAudio) {
-      const placements = tagPlacements
-        .split(',')
-        .map((value) => Number(value.trim()))
-        .filter((value) => Number.isFinite(value) && value >= 0);
+      if (tagEnabled && tagFile) {
+        const placements = tagPlacements
+          .split(',')
+          .map((value) => Number(value.trim()))
+          .filter((value) => Number.isFinite(value) && value >= 0);
 
-      if (placements.length === 0) {
-        addToast('TAGNANAZ needs at least one placement time in seconds.', 'error');
-        setSaving(false);
-        return;
+        if (placements.length === 0) {
+          throw new Error('TAGNANAZ needs at least one placement time in seconds.');
+        }
+
+        if (!finalAudioFile && !finalAudioUrl) {
+          throw new Error('Upload song audio before tagging it.');
+        }
+
+        finalAudioFile = await renderTaggedAudio(
+          finalAudioFile || finalAudioUrl,
+          tagFile,
+          placements,
+          title.trim() || 'tagged-song'
+        );
+        finalAudioUrl = '';
+        setAudioFile(finalAudioFile);
       }
 
-      if (!finalAudioFile && !finalAudioUrl) {
-        addToast('Upload song audio before tagging it.', 'error');
-        setSaving(false);
-        return;
+      const audioResult = finalAudioFile
+        ? await uploadAudio(finalAudioFile, {
+            mediaRole: tagEnabled ? 'tagged_download' : 'preview',
+            relatedTable: 'prod_by_songs',
+            relatedId: song?.id,
+          })
+        : null;
+
+      if (audioResult?.publicUrl) {
+        finalAudioUrl = audioResult.publicUrl;
+        setAudioUrl(audioResult.publicUrl);
       }
 
-      const taggedFile = await renderTaggedAudio(
-        finalAudioFile || finalAudioUrl,
-        tagFile,
-        placements,
-        title.trim() || 'tagged-song'
-      );
+      const payload = {
+        title: title.trim(),
+        artist_name: isCreditsMode ? artistName.trim() : '',
+        description: cleanDescription,
+        rights_text: shouldTreatAsExclusive
+          ? cleanRightsText || `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}`
+          : cleanRightsText,
+        audio_file_url: finalAudioUrl,
+        cover_art_url: finalCoverUrl,
+        price: shouldTreatAsExclusive ? Number(price) || 250 : isCreditsMode ? Number(price) || 0 : 0,
+        is_free: shouldBeFree,
+        release_download: shouldTreatAsExclusive ? released : isCreditsMode ? released : true,
+        exclusive: isCreditsMode ? false : shouldTreatAsExclusive,
+        no_sharing: noSharing,
+        admin_approved: true,
+        hidden,
+      } as const;
 
-      const uploadedTaggedAudio = await uploadAudio(taggedFile);
-      finalAudioFile = taggedFile;
-      finalAudioUrl = uploadedTaggedAudio.url;
-      setAudioFile(taggedFile);
-      setAudioUrl(uploadedTaggedAudio.url);
-      setTagAppliedToCurrentAudio(true);
-      addToast('TAGNANAZ applied to the posted song.', 'success');
+      if (song?.id) {
+        const { error } = await supabase
+          .from('prod_by_songs')
+          .update(payload)
+          .eq('id', song.id);
+
+        if (error) {
+          throw new Error(error.message || 'Song update failed.');
+        }
+      } else {
+        const { error } = await supabase.from('prod_by_songs').insert(payload);
+
+        if (error) {
+          throw new Error(error.message || 'Song creation failed.');
+        }
+      }
+
+      if (tagEnabled && tagFile) {
+        addToast('TAGNANAZ applied to the saved song.', 'success');
+      }
+
+      addToast(song ? 'Song updated.' : 'Song created.', 'success');
+      onSave();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Song save failed.', 'error');
+    } finally {
+      setSaving(false);
     }
-
-    const payload = {
-      title: title.trim(),
-      artist_name: isCreditsMode ? artistName.trim() : '',
-      description: cleanDescription,
-      rights_text: cleanRightsText || (shouldTreatAsExclusive ? `${EXCLUSIVE_INFO_DEFAULT} ${EXCLUSIVE_STEMS_NOTE}` : defaultCreditLine),
-      audio_file_url: finalAudioUrl,
-      cover_art_url: coverUrl.trim(),
-      price: shouldTreatAsExclusive ? Number(price) || 250 : isCreditsMode ? Number(price) || 0 : 0,
-      is_free: shouldBeFree,
-      release_download: shouldTreatAsExclusive ? released : isCreditsMode ? released : true,
-      exclusive: isCreditsMode ? false : shouldTreatAsExclusive,
-      no_sharing: noSharing,
-      admin_approved: true,
-      hidden,
-    } as any;
-
-    if (song?.id) {
-      const { error } = await supabase
-        .from('prod_by_songs')
-        .update(payload)
-        .eq('id', song.id);
-
-      if (error) {
-        addToast('Song update failed.', 'error');
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { error } = await supabase.from('prod_by_songs').insert(payload);
-
-      if (error) {
-        addToast('Song creation failed.', 'error');
-        setSaving(false);
-        return;
-      }
-    }
-
-    addToast(song ? 'Song updated.' : 'Song created.', 'success');
-    setSaving(false);
-    onSave();
   };
 
   return (
@@ -941,11 +921,10 @@ export function SongUploadModal({
               </div>
               <button
                 onClick={() => audioInputRef.current?.click()}
-                disabled={audioUploading}
                 className="px-4 py-3 rounded-2xl bg-[#111] border border-[#222] text-[#aaa] hover:text-[#f5c518] text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50"
               >
                 <Upload size={14} />
-                {audioUploading ? 'Uploading' : 'Audio'}
+                Audio
               </button>
             </div>
 

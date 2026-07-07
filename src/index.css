@@ -312,16 +312,41 @@ body {
 /* Card styles */
 .beat-card {
   background:
-    linear-gradient(180deg, rgba(247,245,240,0.96), rgba(183,178,170,0.92));
-  border: 1px solid rgba(255,255,255,0.24);
+    linear-gradient(180deg, rgba(18,18,18,0.98), rgba(7,7,7,0.99));
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 18px;
   transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 18px 42px rgba(0,0,0,0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -10px 22px rgba(0,0,0,0.52),
+    0 18px 42px rgba(0,0,0,0.54),
+    0 0 0 1px rgba(245,197,24,0.05);
+}
+.beat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.08), transparent 18%, transparent 82%, rgba(255,255,255,0.03)),
+    linear-gradient(145deg, rgba(245,197,24,0.08), transparent 30%, transparent 72%, rgba(135,255,69,0.05)),
+    linear-gradient(118deg, transparent 0 30%, rgba(255,255,255,0.08) 30.4%, transparent 31.2%);
+  opacity: 0.78;
 }
 .beat-card::after {
-  content: none;
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 14px;
+  pointer-events: none;
+  border: 1px solid rgba(245,197,24,0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.02),
+    0 0 16px rgba(245,197,24,0.08),
+    inset 0 0 18px rgba(135,255,69,0.03);
 }
 .beat-card > * { position: relative; z-index: 1; }
 .beat-card:hover {
@@ -704,7 +729,16 @@ body {
   50% { transform: translateY(-6px); }
 }
 
+@keyframes logo-tap-cycle {
+  0% { transform: scale(1) rotate(0deg); }
+  24% { transform: scale(1.12) rotate(120deg); }
+  45% { transform: scale(1.2) rotate(180deg); }
+  72% { transform: scale(1.08) rotate(300deg); }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
 .animate-logo-burst { animation: logo-burst 3s cubic-bezier(.18,.9,.25,1) forwards; }
+.animate-logo-tap-cycle { animation: logo-tap-cycle 1.2s cubic-bezier(.22,.82,.24,1) both; }
 .animate-bounce-in { animation: bounceIn 0.4s ease forwards; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-gold { animation: pulse-gold 2s ease-in-out infinite; }

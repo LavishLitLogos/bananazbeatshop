@@ -526,6 +526,8 @@ export const appStorage = {
       adminSettings: {
         ...current.adminSettings,
         bananazAppSalesCount: current.adminSettings.bananazAppSalesCount + 1,
+        lifetimePaidOrders: current.adminSettings.lifetimePaidOrders + 1,
+        lifetimeRevenue: current.adminSettings.lifetimeRevenue + safeNumber(sale.price),
         manualSales: [newSale, ...current.adminSettings.manualSales].slice(0, 4),
       },
     }));

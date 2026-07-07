@@ -331,12 +331,16 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
     setProfileUploading(true);
 
     try {
-      const result = await uploadProfileMedia(file);
+      const result = await uploadProfileMedia(file, {
+        mediaRole: 'profile_image',
+        relatedTable: 'producer_profile',
+        relatedId: profileId || undefined,
+      });
       setProfileImageUrl(result.url);
       saveStoredProfileImageUrl(result.url);
       addToast('Profile image uploaded.', 'success');
     } catch {
-      addToast('Profile image upload failed. Check profile-media storage bucket.', 'error');
+      addToast('Profile image upload failed.', 'error');
     }
 
     setProfileUploading(false);
@@ -354,7 +358,10 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
     setMediaUploading(true);
 
     try {
-      const result = await uploadProfileMedia(file);
+      const result = await uploadProfileMedia(file, {
+        mediaRole: file.type.startsWith('video/') ? 'profile_video' : 'profile_media',
+        relatedTable: 'profile_media',
+      });
       const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
 
       const { error } = await supabase.from('profile_media').insert({
@@ -375,7 +382,7 @@ export function ProfileRoom({ embedded = false }: { embedded?: boolean }) {
       await fetchProfileExtras();
       refreshContent();
     } catch {
-      addToast('Media upload failed. Check profile-media storage bucket.', 'error');
+      addToast('Media upload failed.', 'error');
     }
 
     setMediaUploading(false);

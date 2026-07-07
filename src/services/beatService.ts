@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { uploadAudio, uploadCoverArt } from './uploadService';
 import type { Beat, BeatTape, BeatTapeTrack, ProdBySong, Room } from '../types';
 import {
   canDownloadBeat as canAccessBeatDownload,
@@ -71,25 +72,11 @@ function applyBeatFilters(query: any, filters?: BeatRoomFilter) {
 }
 
 export async function uploadFileToSupabase(file: File, folder: string) {
-  const safeName = file.name
-    .toLowerCase()
-    .replace(/[^a-z0-9.-]/g, '-')
-    .replace(/-+/g, '-');
+  const result = file.type.startsWith('image/')
+    ? await uploadCoverArt(file, { mediaRole: folder || 'cover_art' })
+    : await uploadAudio(file, { mediaRole: folder || 'preview' });
 
-  const path = `${folder}/${Date.now()}-${safeName}`;
-
-  const { error } = await supabase.storage
-    .from('bananaz-media')
-    .upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-    });
-
-  if (error) throw error;
-
-  const { data } = supabase.storage.from('bananaz-media').getPublicUrl(path);
-
-  return data.publicUrl;
+  return result.publicUrl;
 }
 
 export async function getAllBeats(filters?: BeatRoomFilter) {

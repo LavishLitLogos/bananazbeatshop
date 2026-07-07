@@ -31,13 +31,11 @@ import { getBeatPriceLabel, isBeatExclusive, isBeatFree, isBeatInBeatLab, isBeat
 import { BeatUploadModal } from '../modals/BeatUploadModal';
 import {
   appStorage,
-  BANANAZ_THEME_PALETTE,
   type AdminSettingsState,
-  type BananazModeState,
-  type ManualSaleState,
   type ProducerProfileState,
 } from '../../services/appStorage';
 import { loadProducerProfile, saveProducerProfile } from '../../services/profilePersistence';
+import { SongUploadModal } from '../rooms/ProdByRoom';
 
 type AdminTab = 'overview' | 'beats' | 'tapes' | 'prodby' | 'orders' | 'submissions' | 'notifications' | 'settings';
 type DetailModal = 'beats' | 'tapes' | 'prodby' | 'orders' | 'submissions' | 'notifications' | null;
@@ -52,19 +50,15 @@ interface AuditEntry {
 }
 
 interface ManualSaleForm {
-  buyer_name: string;
-  buyer_email: string;
+  artist_name: string;
   beat_name: string;
   amount: string;
-  payment_method: string;
 }
 
 const manualSaleDefault: ManualSaleForm = {
-  buyer_name: '',
-  buyer_email: '',
+  artist_name: '',
   beat_name: '',
   amount: '',
-  payment_method: 'Manual',
 };
 
 function formatMoney(value?: number | string | null) {
@@ -100,8 +94,6 @@ export function AdminPanel() {
     isAdmin,
     logoutAdmin,
     addToast,
-    adminEditMode,
-    setAdminEditMode,
     refreshContent,
     setRoomCounts,
   } = useApp();
@@ -119,7 +111,9 @@ export function AdminPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingBeat, setEditingBeat] = useState<Beat | null>(null);
+  const [editingSong, setEditingSong] = useState<ProdBySong | null>(null);
   const [showBeatUpload, setShowBeatUpload] = useState(false);
+  const [showSongUpload, setShowSongUpload] = useState(false);
   const [showManualSale, setShowManualSale] = useState(false);
   const [manualSale, setManualSale] = useState<ManualSaleForm>(manualSaleDefault);
   const [adminSettings, setAdminSettings] = useState<AdminSettingsState>(() => appStorage.getAdminSettings());
@@ -476,44 +470,30 @@ export function AdminPanel() {
   const createManualSale = async () => {
     const amount = Number(manualSale.amount || 0);
     const beatName = manualSale.beat_name.trim() || 'Untitled Sale';
-    const buyerName = manualSale.buyer_name.trim() || 'Private buyer';
-    const buyerEmail = manualSale.buyer_email.trim() || 'private@bananaz.local';
+    const artistName = manualSale.artist_name.trim();
 
     setBusyId('manual-sale');
-
-    const { error } = await supabase.from('orders').insert({
-      buyer_name: buyerName,
-      buyer_email: buyerEmail,
-      beat_name: beatName,
-      payment_method: manualSale.payment_method.trim() || 'Manual',
-      amount,
-      status: 'Sold',
-      payment_received: true,
-      release_download: false,
-      sold: true,
-      admin_approved: true,
-      admin_notes: 'Manual sale entered by admin. Download still locked until Release is toggled.',
+    appStorage.addManualSale({
+      beatId: '',
+      beatName,
+      price: amount,
+      buyerName: artistName,
+      buyerEmail: '',
+      notes: '',
     });
-
-    if (error) {
-      addToast('Manual sale failed.', 'error');
-    } else {
-      await logAction({
-        admin_action: 'manual_sale_entry',
-        target_table: 'orders',
-        target_id: beatName,
-        details: {
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          amount,
-        },
-      });
-
-      setManualSale(manualSaleDefault);
-      setShowManualSale(false);
-      await loadAdminData();
-      addToast('Manual sale added. Release is still locked.', 'success');
-    }
+    setAdminSettings(appStorage.getAdminSettings());
+    await logAction({
+      admin_action: 'manual_sale_entry',
+      target_table: 'manual_sales',
+      target_id: beatName,
+      details: {
+        artist_name: artistName,
+        amount,
+      },
+    });
+    setManualSale(manualSaleDefault);
+    setShowManualSale(false);
+    addToast('Manual sale logged to your records.', 'success');
 
     setBusyId(null);
   };
@@ -688,7 +668,6 @@ export function AdminPanel() {
               <BeatsTab
                 beats={filteredBeats}
                 busyId={busyId}
-                editMode={adminEditMode}
                 onNew={() => {
                   setEditingBeat(null);
                   setShowBeatUpload(true);
@@ -706,7 +685,6 @@ export function AdminPanel() {
               <TapesTab
                 tapes={filteredTapes}
                 busyId={busyId}
-                editMode={adminEditMode}
                 onDelete={(tape) => deleteRow('beat_tapes', tape.id, 'beat_tape')}
                 onUpdate={updateBeatTape}
               />
@@ -716,21 +694,23 @@ export function AdminPanel() {
               <ProdByTab
                 songs={filteredSongs}
                 busyId={busyId}
-                editMode={adminEditMode}
+                onEdit={(song) => {
+                  setEditingSong(song);
+                  setShowSongUpload(true);
+                }}
                 onDelete={(song) => deleteRow('prod_by_songs', song.id, 'prod_by_song')}
                 onUpdate={updateProdBySong}
               />
             )}
 
             {activeTab === 'orders' && (
-              <OrdersTab orders={filteredOrders} busyId={busyId} editMode={adminEditMode} onDelete={(order) => deleteRow('orders', order.id, 'order')} onUpdate={updateOrder} />
+              <OrdersTab orders={filteredOrders} busyId={busyId} onDelete={(order) => deleteRow('orders', order.id, 'order')} onUpdate={updateOrder} />
             )}
 
             {activeTab === 'submissions' && (
               <SubmissionsTab
                 submissions={filteredSubmissions}
                 busyId={busyId}
-                editMode={adminEditMode}
                 onDelete={(submission) => deleteRow('submissions', submission.id, 'submission')}
                 onUpdate={updateSubmission}
               />
@@ -748,9 +728,7 @@ export function AdminPanel() {
 
             {activeTab === 'settings' && (
               <SettingsTab
-                editMode={adminEditMode}
                 auditLog={auditLog}
-                onEditMode={setAdminEditMode}
                 onRefresh={refreshEverything}
                 onLogout={logoutToBuyerMode}
               />
@@ -782,6 +760,22 @@ export function AdminPanel() {
           onChange={setManualSale}
           onClose={() => setShowManualSale(false)}
           onSave={createManualSale}
+        />
+      )}
+
+      {showSongUpload && (
+        <SongUploadModal
+          song={editingSong}
+          onClose={() => {
+            setShowSongUpload(false);
+            setEditingSong(null);
+          }}
+          onSave={() => {
+            setShowSongUpload(false);
+            setEditingSong(null);
+            loadAdminData();
+            refreshContent();
+          }}
         />
       )}
 
@@ -868,7 +862,7 @@ function OverviewTab({
         </div>
 
         <p className="text-xs text-[#666] leading-relaxed">
-          Manual sales still keep downloads locked until Release is toggled inside the order.
+          Log outside/private sales here without posting anything live to the shop.
         </p>
       </div>
     </div>
@@ -878,7 +872,6 @@ function OverviewTab({
 function BeatsTab({
   beats,
   busyId,
-  editMode,
   onNew,
   onEdit,
   onDelete,
@@ -886,7 +879,6 @@ function BeatsTab({
 }: {
   beats: Beat[];
   busyId: string | null;
-  editMode: boolean;
   onNew: () => void;
   onEdit: (beat: Beat) => void;
   onDelete: (beat: Beat) => void;
@@ -907,7 +899,7 @@ function BeatsTab({
           <ToggleRow label="Sold" active={beat.sold} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { sold: !beat.sold })} />
           <ToggleRow label="Release Download" active={beat.release_download} disabled={busyId === beat.id} onClick={() => onUpdate(beat, { release_download: !beat.release_download })} />
 
-          <ActionRow onEdit={() => onEdit(beat)} onDelete={() => onDelete(beat)} showDelete={editMode} />
+          <ActionRow onEdit={() => onEdit(beat)} onDelete={() => onDelete(beat)} />
         </AdminCard>
       ))}
     </div>
@@ -917,13 +909,11 @@ function BeatsTab({
 function TapesTab({
   tapes,
   busyId,
-  editMode,
   onDelete,
   onUpdate,
 }: {
   tapes: BeatTape[];
   busyId: string | null;
-  editMode: boolean;
   onDelete: (tape: BeatTape) => void;
   onUpdate: (tape: BeatTape, updates: Partial<BeatTape>) => void;
 }) {
@@ -937,7 +927,7 @@ function TapesTab({
           <ToggleRow label="Hidden" active={tape.hidden} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { hidden: !tape.hidden })} />
           <ToggleRow label="Free" active={tape.is_free} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { is_free: !tape.is_free })} />
           <ToggleRow label="Co-Lab Usable" active={tape.colab_usable} disabled={busyId === tape.id} onClick={() => onUpdate(tape, { colab_usable: !tape.colab_usable })} />
-          <ActionRow onDelete={() => onDelete(tape)} showDelete={editMode} />
+          <ActionRow onDelete={() => onDelete(tape)} />
         </AdminCard>
       ))}
     </div>
@@ -947,13 +937,13 @@ function TapesTab({
 function ProdByTab({
   songs,
   busyId,
-  editMode,
+  onEdit,
   onDelete,
   onUpdate,
 }: {
   songs: ProdBySong[];
   busyId: string | null;
-  editMode: boolean;
+  onEdit: (song: ProdBySong) => void;
   onDelete: (song: ProdBySong) => void;
   onUpdate: (song: ProdBySong, updates: Partial<ProdBySong>) => void;
 }) {
@@ -968,7 +958,7 @@ function ProdByTab({
           <ToggleRow label="Hidden" active={song.hidden} disabled={busyId === song.id} onClick={() => onUpdate(song, { hidden: !song.hidden })} />
           <ToggleRow label="Sold" active={Boolean(song.sold)} disabled={busyId === song.id} onClick={() => onUpdate(song, { sold: !song.sold })} />
           <ToggleRow label="Release Download" active={Boolean(song.release_download)} disabled={busyId === song.id} onClick={() => onUpdate(song, { release_download: !song.release_download })} />
-          <ActionRow onDelete={() => onDelete(song)} showDelete={editMode} />
+          <ActionRow onEdit={() => onEdit(song)} onDelete={() => onDelete(song)} />
         </AdminCard>
       ))}
     </div>
@@ -978,13 +968,11 @@ function ProdByTab({
 function OrdersTab({
   orders,
   busyId,
-  editMode,
   onDelete,
   onUpdate,
 }: {
   orders: Order[];
   busyId: string | null;
-  editMode: boolean;
   onDelete: (order: Order) => void;
   onUpdate: (order: Order, updates: Partial<Order>) => void;
 }) {
@@ -1004,7 +992,7 @@ function OrdersTab({
           <ToggleRow label="Payment Received" active={Boolean(order.payment_received)} disabled={busyId === order.id} onClick={() => onUpdate(order, { payment_received: !order.payment_received })} />
           <ToggleRow label="Release Download" active={order.release_download} disabled={busyId === order.id} onClick={() => onUpdate(order, { release_download: !order.release_download, status: order.release_download ? 'Sold' : 'Released' })} />
           <ToggleRow label="Sold" active={order.sold} disabled={busyId === order.id} onClick={() => onUpdate(order, { sold: !order.sold })} />
-          <ActionRow onDelete={() => onDelete(order)} showDelete={editMode} />
+          <ActionRow onDelete={() => onDelete(order)} />
         </AdminCard>
       ))}
     </div>
@@ -1014,13 +1002,11 @@ function OrdersTab({
 function SubmissionsTab({
   submissions,
   busyId,
-  editMode,
   onDelete,
   onUpdate,
 }: {
   submissions: Submission[];
   busyId: string | null;
-  editMode: boolean;
   onDelete: (submission: Submission) => void;
   onUpdate: (submission: Submission, updates: Partial<Submission>) => void;
 }) {
@@ -1071,7 +1057,7 @@ function SubmissionsTab({
           <ToggleRow label="Prod By Eligible" active={submission.produced_by_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { produced_by_toggle: !submission.produced_by_toggle })} />
           <ToggleRow label="Exclusive Eligible" active={submission.exclusive_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { exclusive_toggle: !submission.exclusive_toggle })} />
           <ToggleRow label="List Eligible" active={submission.list_eligible_toggle} disabled={busyId === submission.id} onClick={() => onUpdate(submission, { list_eligible_toggle: !submission.list_eligible_toggle })} />
-          <ActionRow onDelete={() => onDelete(submission)} showDelete={editMode} />
+          <ActionRow onDelete={() => onDelete(submission)} />
         </AdminCard>
       ))}
     </div>
@@ -1146,21 +1132,15 @@ type EditableSectionId =
   | 'adminControls'
   | 'profile'
   | 'stats'
-  | 'broadcast'
-  | 'manualSale'
   | 'licensing'
   | 'contact';
 
 function SettingsTab({
-  editMode,
   auditLog,
-  onEditMode,
   onRefresh,
   onLogout,
 }: {
-  editMode: boolean;
   auditLog: AuditEntry[];
-  onEditMode: (value: boolean) => void;
   onRefresh: () => void;
   onLogout: () => void;
 }) {
@@ -1168,22 +1148,12 @@ function SettingsTab({
   const [editingSection, setEditingSection] = useState<EditableSectionId | null>(null);
   const [profile, setProfile] = useState<ProducerProfileState>(() => appStorage.getProfile());
   const [adminSettings, setAdminSettings] = useState<AdminSettingsState>(() => appStorage.getAdminSettings());
-  const [bananazMode, setBananazMode] = useState<BananazModeState>(() => appStorage.getBananazMode());
-  const [manualSaleForm, setManualSaleForm] = useState({
-    beatId: '',
-    beatName: '',
-    price: '',
-    buyerName: '',
-    buyerEmail: '',
-    notes: '',
-  });
 
   useEffect(() => {
     const syncLocalState = () => {
       if (editingSection) return;
       setProfile(appStorage.getProfile());
       setAdminSettings(appStorage.getAdminSettings());
-      setBananazMode(appStorage.getBananazMode());
     };
 
     window.addEventListener('bananaz-app-storage:update', syncLocalState);
@@ -1196,15 +1166,6 @@ function SettingsTab({
   const cancelEditing = () => {
     setProfile(appStorage.getProfile());
     setAdminSettings(appStorage.getAdminSettings());
-    setBananazMode(appStorage.getBananazMode());
-    setManualSaleForm({
-      beatId: '',
-      beatName: '',
-      price: '',
-      buyerName: '',
-      buyerEmail: '',
-      notes: '',
-    });
     setEditingSection(null);
   };
 
@@ -1230,16 +1191,6 @@ function SettingsTab({
     setEditingSection(null);
   };
 
-  const saveBananazMode = () => {
-    const savedMode = appStorage.saveBananazMode({
-      ...bananazMode,
-      enabled: false,
-      animationsEnabled: false,
-    });
-    setBananazMode(savedMode);
-    setEditingSection(null);
-  };
-
   const updateFamzCount = (field: 'famzCount' | 'bananazAppFamzCount' | 'bananazAppSalesCount', change: number) => {
     const currentValue = adminSettings[field];
     const nextValue = Math.max(0, currentValue + change);
@@ -1252,37 +1203,6 @@ function SettingsTab({
       ...currentSettings,
       [field]: nextValue,
     }));
-  };
-
-  const addManualSale = () => {
-    const sale: Omit<ManualSaleState, 'id' | 'createdAt'> = {
-      beatId: manualSaleForm.beatId.trim(),
-      beatName: manualSaleForm.beatName.trim() || 'Untitled Sale',
-      price: Number(manualSaleForm.price || 0),
-      buyerName: manualSaleForm.buyerName.trim(),
-      buyerEmail: manualSaleForm.buyerEmail.trim(),
-      notes: manualSaleForm.notes.trim(),
-    };
-
-    appStorage.addManualSale(sale);
-    setAdminSettings(appStorage.getAdminSettings());
-    setManualSaleForm({
-      beatId: '',
-      beatName: '',
-      price: '',
-      buyerName: '',
-      buyerEmail: '',
-      notes: '',
-    });
-  };
-
-  const removeManualSale = (id: string) => {
-    if (!window.confirm('Remove this manual app sale entry?')) {
-      return;
-    }
-
-    appStorage.removeManualSale(id);
-    setAdminSettings(appStorage.getAdminSettings());
   };
 
   const updateProfile = <K extends keyof ProducerProfileState>(field: K, value: ProducerProfileState[K]) => {
@@ -1299,27 +1219,17 @@ function SettingsTab({
     }));
   };
 
-  const updateBananazMode = <K extends keyof BananazModeState>(field: K, value: BananazModeState[K]) => {
-    setBananazMode((currentMode) => ({
-      ...currentMode,
-      [field]: value,
-    }));
-  };
-
-  const selectedTheme = BANANAZ_THEME_PALETTE.find((theme) => theme.name === bananazMode.selectedTheme) || BANANAZ_THEME_PALETTE[0];
-
   return (
     <div className="space-y-4">
       <EditableSettingsSection
         id="adminControls"
         title="Admin Controls"
-        subtitle="Locked by default. Unlock this section before changing admin behavior."
+        subtitle="Owner controls only. These actions stay hidden from buyers."
         editingSection={editingSection}
         onEdit={setEditingSection}
         onCancel={cancelEditing}
         onSave={saveAdminSettings}
       >
-        <ToggleRow label="Edit Mode" active={editMode} onClick={() => onEditMode(!editMode)} />
         <ToggleRow
           label="Allow Submissions"
           active={adminSettings.allowSubmissions}
@@ -1435,90 +1345,6 @@ function SettingsTab({
           onPlus={() => updateFamzCount('bananazAppSalesCount', 1)}
           onChange={(value) => updateAdminSettings('bananazAppSalesCount', value)}
         />
-      </EditableSettingsSection>
-
-      <EditableSettingsSection
-        id="broadcast"
-        title="Bananaz Mode Broadcast - Parked"
-        subtitle="Controls are locked and forced OFF so this feature cannot break the app."
-        editingSection={editingSection}
-        onEdit={setEditingSection}
-        onCancel={cancelEditing}
-        onSave={saveBananazMode}
-      >
-        <div className="rounded-xl border border-red-900/30 bg-red-950/15 p-3 text-xs text-red-300 leading-relaxed">
-          Bananaz Mode is parked for stability. Saving this section forces the mode OFF and disables animations.
-        </div>
-
-        <ToggleRow label="Bananaz Mode Active" active={false} disabled onClick={() => undefined} />
-        <ToggleRow label="Glow Enabled" active={bananazMode.glowEnabled} onClick={() => updateBananazMode('glowEnabled', !bananazMode.glowEnabled)} />
-        <ToggleRow label="Animations Enabled" active={false} disabled onClick={() => undefined} />
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {BANANAZ_THEME_PALETTE.map((theme) => (
-            <button
-              key={theme.name}
-              type="button"
-              onClick={() => updateBananazMode('selectedTheme', theme.name)}
-              className={`rounded-xl border p-3 text-left transition-all ${
-                bananazMode.selectedTheme === theme.name ? 'border-[#f5c518] bg-[#f5c518]/10' : 'border-[#222] bg-[#0d0d0d]'
-              }`}
-            >
-              <div className="h-6 rounded-lg mb-2" style={{ background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`, boxShadow: `0 0 18px ${theme.glow}` }} />
-              <div className="text-xs text-white font-semibold">{theme.label}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3">
-          <div className="text-xs text-[#777] mb-2">Selected Theme</div>
-          <div className="text-sm text-white font-bold">{selectedTheme.label}</div>
-        </div>
-
-        <AdminTextInput label="Broadcast Title" value={bananazMode.broadcastTitle} onChange={(value) => updateBananazMode('broadcastTitle', value)} />
-        <AdminTextArea label="Broadcast Message" value={bananazMode.broadcastMessage} onChange={(value) => updateBananazMode('broadcastMessage', value)} />
-      </EditableSettingsSection>
-
-      <EditableSettingsSection
-        id="manualSale"
-        title="Manual / Private App Sale"
-        subtitle="Optional fields. Unlock to add outside/private sales inside app storage."
-        editingSection={editingSection}
-        onEdit={setEditingSection}
-        onCancel={cancelEditing}
-        onSave={() => {
-          saveAdminSettings();
-          setEditingSection(null);
-        }}
-      >
-        <AdminTextInput label="Beat ID" value={manualSaleForm.beatId} onChange={(value) => setManualSaleForm((current) => ({ ...current, beatId: value }))} />
-        <AdminTextInput label="Beat Name" value={manualSaleForm.beatName} onChange={(value) => setManualSaleForm((current) => ({ ...current, beatName: value }))} />
-        <AdminTextInput label="Price" type="number" value={manualSaleForm.price} onChange={(value) => setManualSaleForm((current) => ({ ...current, price: value }))} />
-        <AdminTextInput label="Buyer Name" value={manualSaleForm.buyerName} onChange={(value) => setManualSaleForm((current) => ({ ...current, buyerName: value }))} />
-        <AdminTextInput label="Buyer Email" value={manualSaleForm.buyerEmail} onChange={(value) => setManualSaleForm((current) => ({ ...current, buyerEmail: value }))} />
-        <AdminTextArea label="Notes" value={manualSaleForm.notes} onChange={(value) => setManualSaleForm((current) => ({ ...current, notes: value }))} />
-
-        <button type="button" onClick={addManualSale} className="btn-dark w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-          <Plus size={14} />
-          Add Manual Sale
-        </button>
-
-        {adminSettings.manualSales.length > 0 && (
-          <div className="space-y-2">
-            {adminSettings.manualSales.slice(0, 4).map((sale) => (
-              <div key={sale.id} className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm text-white font-semibold truncate">{sale.beatName || 'Untitled Sale'}</div>
-                  <div className="text-xs text-[#777] mt-1">{formatMoney(sale.price)} - {sale.buyerName || 'Private buyer'}</div>
-                  {sale.notes && <div className="text-[11px] text-[#555] mt-1">{sale.notes}</div>}
-                </div>
-                <button type="button" onClick={() => removeManualSale(sale.id)} className="text-red-400 p-2 rounded-lg hover:bg-red-950/20" aria-label="Remove manual sale">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </EditableSettingsSection>
 
       <EditableSettingsSection
@@ -1927,18 +1753,16 @@ function ManualSaleModal({
           </button>
         </div>
 
-        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Buyer name" value={form.buyer_name} onChange={(event) => set('buyer_name', event.target.value)} />
-        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Buyer email/contact" value={form.buyer_email} onChange={(event) => set('buyer_email', event.target.value)} />
-        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Beat/order name" value={form.beat_name} onChange={(event) => set('beat_name', event.target.value)} />
+        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Artist (optional)" value={form.artist_name} onChange={(event) => set('artist_name', event.target.value)} />
+        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Beat name (optional)" value={form.beat_name} onChange={(event) => set('beat_name', event.target.value)} />
         <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Amount" type="number" value={form.amount} onChange={(event) => set('amount', event.target.value)} />
-        <input className="input-dark w-full px-4 py-3 text-sm" placeholder="Payment method" value={form.payment_method} onChange={(event) => set('payment_method', event.target.value)} />
 
         <button onClick={onSave} disabled={busy} className="btn-gold w-full py-3 rounded-xl text-sm disabled:opacity-40">
           {busy ? 'Saving...' : 'Save Manual Sale'}
         </button>
 
         <p className="text-xs text-[#666] leading-relaxed">
-          This marks payment received, but does not release download access until admin toggles Release Download.
+          This logs an outside sale to your records only. It does not post or list anything in the shop.
         </p>
       </div>
     </div>

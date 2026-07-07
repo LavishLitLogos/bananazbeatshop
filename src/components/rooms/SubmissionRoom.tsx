@@ -225,7 +225,11 @@ export function SubmissionRoom() {
         throw new Error('Only purchased Beat Lab beats can be submitted here.');
       }
 
-      const uploaded = await uploadSubmissionFile(form.file);
+      const uploaded = await uploadSubmissionFile(form.file, {
+        mediaRole: 'submission_file',
+        relatedTable: 'submissions',
+        relatedId: matchedBeat.id,
+      });
 
       const { data: inserted, error } = await supabase
         .from('submissions')
