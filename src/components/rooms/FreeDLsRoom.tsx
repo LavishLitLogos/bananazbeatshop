@@ -137,7 +137,7 @@ export function FreeDLsRoom() {
                 className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
               >
                 <Plus size={14} />
-                + Upload
+                Upload
               </button>
             )}
           </div>

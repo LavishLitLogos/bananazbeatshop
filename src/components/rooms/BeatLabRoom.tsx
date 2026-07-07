@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   Download,
@@ -576,7 +576,7 @@ export function BeatLabRoom() {
                   className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   <Plus size={14} />
-                  + Upload
+                  Upload
                 </button>
               </>
             )}
@@ -670,7 +670,7 @@ export function BeatLabRoom() {
                 }}
                 className="btn-gold mt-4 px-6 py-3 rounded-xl text-sm"
               >
-                + Upload
+                Upload
               </button>
             )}
           </div>

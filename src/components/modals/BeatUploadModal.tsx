@@ -157,8 +157,11 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
       let coverUrl = form.cover_art_url.trim();
       let sourceAudioFile = audioFile;
 
-      if (tagEnabled && !tagFile) {
-        throw new Error('TAGNANAZ is on. Upload a beat tag file before saving.');
+      const replacingAudio = Boolean(sourceAudioFile);
+      const retagRequested = Boolean(tagPlacements.trim()) || Boolean(tagFile) || replacingAudio;
+
+      if (tagEnabled && retagRequested && !tagFile) {
+        throw new Error('Upload a beat tag file before rebaking this beat.');
       }
 
       if (tagEnabled && tagFile) {
@@ -381,7 +384,7 @@ export function BeatUploadModal({ beat, onClose, onSave }: BeatUploadModalProps)
             <div>
               <div className="text-sm text-white">TAGNANAZ</div>
               <div className="text-[11px] text-[#666] mt-1">
-                Drop a beat tag on the upload and bake it into the beat file.
+                Existing baked audio stays as-is until you replace or rebake it.
               </div>
             </div>
 

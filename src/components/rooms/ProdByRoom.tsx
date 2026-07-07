@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   Download,
@@ -326,7 +326,7 @@ export function ProdByRoom() {
                   className="btn-gold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   <Plus size={14} />
-                  + Upload
+                  Upload
                 </button>
               </>
             )}
@@ -368,7 +368,7 @@ export function ProdByRoom() {
                 }}
                 className="btn-gold mt-4 px-6 py-3 rounded-xl text-sm"
               >
-                + Upload
+                Upload
               </button>
             )}
           </div>
@@ -749,8 +749,11 @@ export function SongUploadModal({
       let finalAudioFile = audioFile;
       const finalCoverUrl = normalizeR2MediaUrl(coverUrl).trim();
 
-      if (tagEnabled && !tagFile) {
-        throw new Error('TAGNANAZ is on. Upload a beat tag file before saving.');
+      const replacingAudio = Boolean(finalAudioFile);
+      const retagRequested = Boolean(tagPlacements.trim()) || Boolean(tagFile) || replacingAudio;
+
+      if (tagEnabled && retagRequested && !tagFile) {
+        throw new Error('Upload a beat tag file before rebaking this song.');
       }
 
       if (tagEnabled && tagFile) {
@@ -966,7 +969,7 @@ export function SongUploadModal({
               <div>
                 <div className="text-sm text-white">TAGNANAZ</div>
                 <div className="text-[11px] text-[#666] mt-1">
-                  Drop a tag on the song upload and bake it into the saved file.
+                  Existing baked audio stays as-is until you replace or rebake it.
                 </div>
               </div>
 
@@ -1093,4 +1096,3 @@ function ToggleBox({
     </button>
   );
 }
-
