@@ -1,9 +1,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
+const FUNCTION_NAME = 'admin-beats';
+
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL') || '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || '',
 );
 
 const corsHeaders = {
@@ -12,27 +14,55 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token, X-Client-Info, Apikey',
 };
 
+function responseJson(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
+function fail(step: string, error: unknown, status = 400) {
+  const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+  return responseJson(
+    {
+      ok: false,
+      function: FUNCTION_NAME,
+      step,
+      error: message,
+    },
+    status,
+  );
+}
+
+function success(record: unknown) {
+  return responseJson({
+    ok: true,
+    function: FUNCTION_NAME,
+    record,
+  });
+}
+
+function requireAdminToken(req: Request) {
+  const adminToken = req.headers.get('X-Admin-Token');
+  const validAdminCodes = new Set(['rwmg25', 'GLOKEY']);
+
+  if (!adminToken || !validAdminCodes.has(adminToken)) {
+    throw new Error('Unauthorized');
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
-  // Verify admin token
-  const adminToken = req.headers.get('X-Admin-Token');
-
-  const VALID_ADMIN_CODES = new Set([
-    'rwmg25',
-    'GLOKEY',
-  ]);
-
-  if (!adminToken || !VALID_ADMIN_CODES.has(adminToken)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    });
+  try {
+    requireAdminToken(req);
+  } catch (error) {
+    return fail('require_admin_token', error, 401);
   }
 
   try {
@@ -40,7 +70,6 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const body = req.method !== 'GET' ? await req.json() : {};
 
-    // Beats CRUD
     if (url.pathname.includes('beats')) {
       switch (action) {
         case 'list': {
@@ -49,8 +78,8 @@ Deno.serve(async (req) => {
             .select('*')
             .eq('hidden', false)
             .order('created_at', { ascending: false });
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('beats_list', error, 500);
+          return success(data);
         }
 
         case 'create': {
@@ -59,35 +88,31 @@ Deno.serve(async (req) => {
             .insert({ ...body, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .select()
             .single();
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('beats_create', error, 500);
+          return success(data);
         }
 
         case 'update': {
-          const { id, ...updates } = body;
+          const { id, ...updates } = body as Record<string, unknown>;
           const { data, error } = await supabase
             .from('beats')
             .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('beats_update', error, 500);
+          return success(data);
         }
 
         case 'delete': {
-          const { id } = body;
+          const { id } = body as Record<string, unknown>;
           const { error } = await supabase.from('beats').delete().eq('id', id);
-          if (error) throw error;
-          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('beats_delete', error, 500);
+          return success({ id, deleted: true });
         }
-
-        default:
-          return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    // Prod By Songs CRUD
     if (url.pathname.includes('songs')) {
       switch (action) {
         case 'list': {
@@ -96,8 +121,8 @@ Deno.serve(async (req) => {
             .select('*')
             .eq('hidden', false)
             .order('created_at', { ascending: false });
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('songs_list', error, 500);
+          return success(data);
         }
 
         case 'create': {
@@ -106,36 +131,31 @@ Deno.serve(async (req) => {
             .insert({ ...body, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .select()
             .single();
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('songs_create', error, 500);
+          return success(data);
         }
 
         case 'update': {
-          const { id, ...updates } = body;
+          const { id, ...updates } = body as Record<string, unknown>;
           const { data, error } = await supabase
             .from('prod_by_songs')
             .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('songs_update', error, 500);
+          return success(data);
         }
 
         case 'delete': {
-          const { id } = body;
+          const { id } = body as Record<string, unknown>;
           const { error } = await supabase.from('prod_by_songs').delete().eq('id', id);
-          if (error) throw error;
-          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('songs_delete', error, 500);
+          return success({ id, deleted: true });
         }
-
-        default:
-          return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-
-    // Beat Tapes CRUD
     if (url.pathname.includes('tapes')) {
       switch (action) {
         case 'list': {
@@ -144,18 +164,18 @@ Deno.serve(async (req) => {
             .select('*, tracks:beat_tape_tracks(*)')
             .eq('hidden', false)
             .order('created_at', { ascending: false });
-          if (error) throw error;
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('tapes_list', error, 500);
+          return success(data);
         }
 
         case 'create': {
-          const { tracks = [], ...tapePayload } = body;
+          const { tracks = [], ...tapePayload } = body as Record<string, any>;
           const { data: tape, error } = await supabase
             .from('beat_tapes')
             .insert({ ...tapePayload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .select()
             .single();
-          if (error) throw error;
+          if (error) return fail('tapes_create', error, 500);
 
           if (Array.isArray(tracks) && tracks.length > 0) {
             const trackRows = tracks
@@ -168,24 +188,27 @@ Deno.serve(async (req) => {
               }));
             if (trackRows.length > 0) {
               const { error: trackError } = await supabase.from('beat_tape_tracks').insert(trackRows);
-              if (trackError) throw trackError;
+              if (trackError) return fail('tapes_create_tracks', trackError, 500);
             }
           }
 
-          return new Response(JSON.stringify(tape), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          return success(tape);
         }
 
         case 'update': {
-          const { id, tracks, ...updates } = body;
+          const { id, tracks, ...updates } = body as Record<string, any>;
           const { data, error } = await supabase
             .from('beat_tapes')
             .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
-          if (error) throw error;
+          if (error) return fail('tapes_update', error, 500);
+
           if (Array.isArray(tracks)) {
-            await supabase.from('beat_tape_tracks').delete().eq('tape_id', id);
+            const { error: deleteTracksError } = await supabase.from('beat_tape_tracks').delete().eq('tape_id', id);
+            if (deleteTracksError) return fail('tapes_replace_tracks_delete', deleteTracksError, 500);
+
             const trackRows = tracks
               .filter((track: any) => track.title && track.audio_file_url)
               .map((track: any, index: number) => ({
@@ -196,30 +219,24 @@ Deno.serve(async (req) => {
               }));
             if (trackRows.length > 0) {
               const { error: trackError } = await supabase.from('beat_tape_tracks').insert(trackRows);
-              if (trackError) throw trackError;
+              if (trackError) return fail('tapes_replace_tracks_insert', trackError, 500);
             }
           }
-          return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+          return success(data);
         }
 
         case 'delete': {
-          const { id } = body;
+          const { id } = body as Record<string, unknown>;
           const { error } = await supabase.from('beat_tapes').delete().eq('id', id);
-          if (error) throw error;
-          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (error) return fail('tapes_delete', error, 500);
+          return success({ id, deleted: true });
         }
-
-        default:
-          return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid endpoint' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch (err: any) {
-    console.error('Admin function error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return fail('route_match', 'Invalid endpoint or action.', 400);
+  } catch (error) {
+    return fail('unhandled', error, 500);
   }
 });

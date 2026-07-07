@@ -18,12 +18,46 @@ export type UploadOptions = {
 type UploadKind = 'audio' | 'image' | 'video' | 'file';
 
 type EdgeUploadResponse = {
-  publicUrl: string;
-  storagePath: string;
-  path: string;
+  ok?: boolean;
+  function?: string;
+  objectKey?: string;
+  url?: string;
+  record?: string;
   contentType: string;
   size: number;
+  publicUrl?: string;
+  storagePath?: string;
+  path?: string;
 };
+
+async function buildInvokeError(functionName: string, payloadType: string, error: any, data: unknown) {
+  const context = error?.context;
+  let detail: any = null;
+
+  if (context && typeof context.json === 'function') {
+    try {
+      detail = await context.json();
+    } catch {
+      detail = null;
+    }
+  }
+
+  console.error(`[${functionName}] invoke failed`, {
+    function: functionName,
+    payloadType,
+    returnedData: data,
+    returnedError: error,
+    detail,
+  });
+
+  const step = detail?.step ? `${detail.step}: ` : '';
+  const message =
+    detail?.error ||
+    error?.message ||
+    `${functionName} failed.`;
+
+  return new Error(`${step}${message}`);
+}
 
 function normalizeContentType(file: File) {
   const rawType = String(file.type || '').toLowerCase().trim();
@@ -66,24 +100,32 @@ async function uploadViaR2Function(
     formData.append('relatedId', options.relatedId);
   }
 
-  const { data, error } = await supabase.functions.invoke('r2-upload', {
+  const functionName = 'r2-upload';
+  const payloadType = 'FormData';
+  const { data, error } = await supabase.functions.invoke(functionName, {
     body: formData,
   });
 
   if (error) {
-    throw new Error(error.message || 'R2 upload failed.');
+    throw await buildInvokeError(functionName, payloadType, error, data);
   }
 
   const response = data as EdgeUploadResponse | null;
-  if (!response?.publicUrl || !response.storagePath) {
+  if (!response?.ok || !response?.objectKey || !response?.url) {
+    console.error(`[${functionName}] unexpected response`, {
+      function: functionName,
+      payloadType,
+      returnedData: data,
+      returnedError: error,
+    });
     throw new Error('R2 upload succeeded, but no storage path was returned.');
   }
 
   return {
-    url: response.publicUrl,
-    publicUrl: response.publicUrl,
-    path: response.storagePath,
-    storagePath: response.storagePath,
+    url: response.url,
+    publicUrl: response.url,
+    path: response.objectKey,
+    storagePath: response.objectKey,
     contentType: response.contentType,
     size: response.size,
   };

@@ -2,14 +2,16 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 type UploadKind = 'audio' | 'image' | 'video' | 'file';
-
-type UploadResponse = {
-  publicUrl: string;
-  storagePath: string;
-  path: string;
-  contentType: string;
-  size: number;
-};
+type UploadStep =
+  | 'method_check'
+  | 'parse_form_data'
+  | 'validate_file'
+  | 'validate_metadata'
+  | 'read_environment'
+  | 'create_r2_client'
+  | 'upload_to_r2'
+  | 'save_metadata_to_supabase'
+  | 'return_success';
 
 type R2Config = {
   endpoint: string;
@@ -20,6 +22,18 @@ type R2Config = {
   publicBaseUrl: string;
 };
 
+type UploadResult = {
+  ok: true;
+  function: 'r2-upload';
+  objectKey: string;
+  url: string;
+  record: string;
+  contentType: string;
+  size: number;
+};
+
+const FUNCTION_NAME = 'r2-upload';
+
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -28,7 +42,7 @@ const corsHeaders: Record<string, string> = {
 
 const encoder = new TextEncoder();
 
-function jsonResponse(body: unknown, status = 200): Response {
+function responseJson(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -36,6 +50,19 @@ function jsonResponse(body: unknown, status = 200): Response {
       'Content-Type': 'application/json',
     },
   });
+}
+
+function fail(step: UploadStep, error: unknown, status = 400): Response {
+  const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+  return responseJson(
+    {
+      ok: false,
+      function: FUNCTION_NAME,
+      step,
+      error: message,
+    },
+    status,
+  );
 }
 
 function getRequiredEnv(key: string): string {
@@ -48,14 +75,6 @@ function getRequiredEnv(key: string): string {
 
 function normalizeUrl(value: string) {
   return value.replace(/\/+$/g, '');
-}
-
-function deriveHostFromEndpoint(endpoint: string) {
-  try {
-    return new URL(endpoint).host;
-  } catch {
-    throw new Error('Invalid R2 endpoint configuration.');
-  }
 }
 
 function getR2Config(): R2Config {
@@ -72,12 +91,30 @@ function getR2Config(): R2Config {
 
   return {
     endpoint: normalizeUrl(endpoint),
-    host: deriveHostFromEndpoint(endpoint),
+    host: new URL(endpoint).host,
     accessKeyId: getRequiredEnv('R2_ACCESS_KEY_ID'),
     secretAccessKey: getRequiredEnv('R2_SECRET_ACCESS_KEY'),
     bucketName: getRequiredEnv('R2_BUCKET_NAME'),
     publicBaseUrl: normalizeUrl(Deno.env.get('R2_PUBLIC_URL') || ''),
   };
+}
+
+function createAdminClient() {
+  const supabaseUrl =
+    Deno.env.get('SUPABASE_URL') ||
+    Deno.env.get('PROJECT_URL') ||
+    Deno.env.get('SB_URL') ||
+    '';
+  const serviceRoleKey =
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ||
+    Deno.env.get('SERVICE_ROLE_KEY') ||
+    '';
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase service role environment is missing for metadata save.');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 function sanitizeFileName(fileName: string): string {
@@ -143,10 +180,7 @@ function toHex(buffer: ArrayBuffer): string {
 }
 
 async function sha256Hex(value: string | ArrayBuffer): Promise<string> {
-  const data: BufferSource =
-    typeof value === 'string'
-      ? encoder.encode(value)
-      : value;
+  const data: BufferSource = typeof value === 'string' ? encoder.encode(value) : value;
   const hash = await crypto.subtle.digest('SHA-256', data);
   return toHex(hash);
 }
@@ -262,17 +296,6 @@ async function putObjectToR2(params: {
   }
 }
 
-function createAdminClient() {
-  const url = Deno.env.get('SUPABASE_URL') || Deno.env.get('VITE_SUPABASE_URL') || '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-  if (!url || !serviceRoleKey) {
-    return null;
-  }
-
-  return createClient(url, serviceRoleKey);
-}
-
 async function saveMediaAsset(params: {
   relatedTable: string;
   relatedRecordId: string;
@@ -286,8 +309,6 @@ async function saveMediaAsset(params: {
   originalFileName: string;
 }) {
   const adminClient = createAdminClient();
-  if (!adminClient) return;
-
   const payload = {
     related_table: params.relatedTable,
     related_record_id: params.relatedRecordId,
@@ -303,13 +324,17 @@ async function saveMediaAsset(params: {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await adminClient
+  const { data, error } = await adminClient
     .from('media_assets')
-    .upsert(payload, { onConflict: 'storage_path' });
+    .upsert(payload, { onConflict: 'storage_path' })
+    .select('id')
+    .single();
 
   if (error) {
     throw new Error(error.message || 'Media metadata save failed.');
   }
+
+  return String(data?.id || params.storagePath);
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
@@ -318,33 +343,75 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (request.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed.' }, 405);
+    return fail('method_check', 'Method not allowed.', 405);
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch (error) {
+    return fail('parse_form_data', error, 400);
+  }
+
+  let fileEntry: File;
+  let kind: UploadKind;
+  let mediaRole = '';
+  let relatedTable = '';
+  let relatedRecordId = '';
+
+  try {
+    const parsedFile = formData.get('file');
+    kind = normalizeUploadKind(formData.get('type'));
+    mediaRole = String(formData.get('role') || kind).trim() || kind;
+    relatedTable = String(formData.get('relatedTable') || '').trim();
+    relatedRecordId = String(formData.get('relatedId') || '').trim();
+
+    if (!(parsedFile instanceof File)) {
+      throw new Error('Missing upload file.');
+    }
+
+    const contentType = parsedFile.type || 'application/octet-stream';
+    validateFileType(kind, contentType);
+    fileEntry = parsedFile;
+  } catch (error) {
+    return fail('validate_file', error, 400);
   }
 
   try {
-    const formData = await request.formData();
-    const fileEntry = formData.get('file');
-    const kind = normalizeUploadKind(formData.get('type'));
-    const mediaRole = String(formData.get('role') || kind).trim() || kind;
-    const relatedTable = String(formData.get('relatedTable') || '').trim();
-    const relatedRecordId = String(formData.get('relatedId') || '').trim();
-
-    if (!(fileEntry instanceof File)) {
-      return jsonResponse({ error: 'Missing upload file.' }, 400);
+    if (!mediaRole) {
+      throw new Error('Missing media role.');
     }
+  } catch (error) {
+    return fail('validate_metadata', error, 400);
+  }
 
-    const contentType = fileEntry.type || 'application/octet-stream';
-    validateFileType(kind, contentType);
+  let config: R2Config;
+  try {
+    config = getR2Config();
+  } catch (error) {
+    return fail('read_environment', error, 500);
+  }
 
-    const config = getR2Config();
-    const storagePath = buildStoragePath(kind, fileEntry, mediaRole);
+  try {
+    createAdminClient();
+  } catch (error) {
+    return fail('create_r2_client', error, 500);
+  }
+
+  const contentType = fileEntry.type || 'application/octet-stream';
+  const storagePath = buildStoragePath(kind, fileEntry, mediaRole);
+  const publicUrl = publicUrlForPath(config, storagePath);
+
+  try {
     const body = await fileEntry.arrayBuffer();
-
     await putObjectToR2({ config, storagePath, contentType, body });
+  } catch (error) {
+    return fail('upload_to_r2', error, 500);
+  }
 
-    const publicUrl = publicUrlForPath(config, storagePath);
-
-    await saveMediaAsset({
+  let recordId = storagePath;
+  try {
+    recordId = await saveMediaAsset({
       relatedTable,
       relatedRecordId,
       mediaRole,
@@ -356,18 +423,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
       bucketName: config.bucketName,
       originalFileName: fileEntry.name,
     });
-
-    const result: UploadResponse = {
-      publicUrl,
-      storagePath,
-      path: storagePath,
-      contentType,
-      size: fileEntry.size,
-    };
-
-    return jsonResponse(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Upload failed.';
-    return jsonResponse({ error: message }, 500);
+    return fail('save_metadata_to_supabase', error, 500);
   }
+
+  const result: UploadResult = {
+    ok: true,
+    function: FUNCTION_NAME,
+    objectKey: storagePath,
+    url: publicUrl,
+    record: recordId,
+    contentType,
+    size: fileEntry.size,
+  };
+
+  return responseJson(result, 200);
 });

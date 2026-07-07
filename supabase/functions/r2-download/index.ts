@@ -2,6 +2,15 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 type EntityType = 'beat' | 'prod_by_song' | 'beat_tape_track';
+type DownloadStep =
+  | 'method_check'
+  | 'parse_request'
+  | 'validate_request'
+  | 'read_environment'
+  | 'load_target'
+  | 'check_authorization'
+  | 'generate_signed_url'
+  | 'return_success';
 
 type R2Config = {
   endpoint: string;
@@ -11,6 +20,8 @@ type R2Config = {
   bucketName: string;
 };
 
+const FUNCTION_NAME = 'r2-download';
+
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -19,7 +30,7 @@ const corsHeaders: Record<string, string> = {
 
 const encoder = new TextEncoder();
 
-function jsonResponse(body: unknown, status = 200): Response {
+function responseJson(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -27,6 +38,19 @@ function jsonResponse(body: unknown, status = 200): Response {
       'Content-Type': 'application/json',
     },
   });
+}
+
+function fail(step: DownloadStep, error: unknown, status = 400): Response {
+  const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+  return responseJson(
+    {
+      ok: false,
+      function: FUNCTION_NAME,
+      step,
+      error: message,
+    },
+    status,
+  );
 }
 
 function getRequiredEnv(key: string): string {
@@ -63,14 +87,21 @@ function getR2Config(): R2Config {
 }
 
 function createAdminClient() {
-  const url = Deno.env.get('SUPABASE_URL') || Deno.env.get('VITE_SUPABASE_URL') || '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabaseUrl =
+    Deno.env.get('SUPABASE_URL') ||
+    Deno.env.get('PROJECT_URL') ||
+    Deno.env.get('SB_URL') ||
+    '';
+  const serviceRoleKey =
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ||
+    Deno.env.get('SERVICE_ROLE_KEY') ||
+    '';
 
-  if (!url || !serviceRoleKey) {
+  if (!supabaseUrl || !serviceRoleKey) {
     throw new Error('Supabase service role is not configured for signed downloads.');
   }
 
-  return createClient(url, serviceRoleKey);
+  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 function toHex(buffer: ArrayBuffer): string {
@@ -193,9 +224,7 @@ function extractStoragePathFromUrl(url: string) {
 
   try {
     const parsed = new URL(url);
-    return parsed.pathname
-      .replace(/^\/+/, '')
-      .replace(new RegExp(`^${bucket}/`), '');
+    return parsed.pathname.replace(/^\/+/, '').replace(new RegExp(`^${bucket}/`), '');
   } catch {
     return '';
   }
@@ -209,7 +238,7 @@ async function resolveBeatDownload(admin: ReturnType<typeof createAdminClient>, 
     .single();
 
   if (error || !beat) {
-    throw new Error('Beat not found.');
+    throw new Error(error?.message || 'Beat not found.');
   }
 
   if (beat.hidden || beat.admin_approved === false || beat.sold) {
@@ -248,7 +277,7 @@ async function resolveSongDownload(admin: ReturnType<typeof createAdminClient>, 
     .single();
 
   if (error || !song) {
-    throw new Error('Song not found.');
+    throw new Error(error?.message || 'Song not found.');
   }
 
   if (song.hidden || song.admin_approved === false || song.sold) {
@@ -277,7 +306,7 @@ async function resolveTapeTrackDownload(
     .single();
 
   if (tapeError || !tape) {
-    throw new Error('Beat tape not found.');
+    throw new Error(tapeError?.message || 'Beat tape not found.');
   }
 
   if (tape.hidden || tape.admin_approved === false) {
@@ -310,7 +339,7 @@ async function resolveTapeTrackDownload(
     .single();
 
   if (trackError || !track) {
-    throw new Error('Beat tape track not found.');
+    throw new Error(trackError?.message || 'Beat tape track not found.');
   }
 
   return {
@@ -325,25 +354,32 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (request.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed.' }, 405);
+    return fail('method_check', 'Method not allowed.', 405);
   }
 
+  let body: { entityType?: EntityType; entityId?: string; parentTapeId?: string };
   try {
-    const { entityType, entityId, parentTapeId } = await request.json() as {
-      entityType?: EntityType;
-      entityId?: string;
-      parentTapeId?: string;
-    };
+    body = await request.json();
+  } catch (error) {
+    return fail('parse_request', error, 400);
+  }
 
-    if (!entityType || !entityId) {
-      return jsonResponse({ error: 'Missing download target.' }, 400);
-    }
+  const { entityType, entityId, parentTapeId } = body;
+  if (!entityType || !entityId) {
+    return fail('validate_request', 'Missing download target.', 400);
+  }
 
-    const admin = createAdminClient();
-    const config = getR2Config();
+  let admin: ReturnType<typeof createAdminClient>;
+  let config: R2Config;
+  try {
+    admin = createAdminClient();
+    config = getR2Config();
+  } catch (error) {
+    return fail('read_environment', error, 500);
+  }
 
-    let resolved: { storagePath: string; fileName: string };
-
+  let resolved: { storagePath: string; fileName: string };
+  try {
     if (entityType === 'beat') {
       resolved = await resolveBeatDownload(admin, entityId);
     } else if (entityType === 'prod_by_song') {
@@ -356,20 +392,30 @@ Deno.serve(async (request: Request): Promise<Response> => {
     } else {
       throw new Error('Unsupported download target.');
     }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const step: DownloadStep =
+      message.includes('locked') || message.includes('available for download')
+        ? 'check_authorization'
+        : 'load_target';
+    return fail(step, error, 400);
+  }
 
-    if (!resolved.storagePath) {
-      throw new Error('No R2 object key found for this download.');
-    }
+  if (!resolved.storagePath) {
+    return fail('load_target', 'No R2 object key found for this download.', 400);
+  }
 
+  try {
     const signedUrl = await createSignedGetUrl(config, resolved.storagePath, resolved.fileName);
-
-    return jsonResponse({
+    return responseJson({
+      ok: true,
+      function: FUNCTION_NAME,
+      objectKey: resolved.storagePath,
       url: signedUrl,
+      record: entityId,
       fileName: resolved.fileName,
-      storagePath: resolved.storagePath,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Signed download failed.';
-    return jsonResponse({ error: message }, 400);
+    return fail('generate_signed_url', error, 500);
   }
 });
