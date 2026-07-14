@@ -19,6 +19,7 @@ import { requestSignedDownload, triggerBrowserDownload } from '../../services/do
 import type { Beat } from '../../types';
 import { BEAT_INFO_DEFAULT, BRAND_NAME } from '../../utils/branding';
 import { canBuyBeat, canDownloadBeat, DEFAULT_BEAT_PRICE, getBeatPriceLabel, getBeatPriceValue, isBeatFree } from '../../utils/beatAccess';
+import { appShareUrl } from '../../utils/shareLinks';
 import { ShareButton } from '../ui/ShareButton';
 
 interface BeatDetailModalProps {
@@ -461,7 +462,7 @@ export function BeatDetailModal({ beat, onClose, onBuy, allBeats = [] }: BeatDet
             <ShareButton
               title={beat.title}
               text={`Check out "${beat.title}" by ${BRAND_NAME}`}
-              url={window.location.href}
+              url={appShareUrl(`beat-${beat.id}`)}
               className="px-4 py-3 rounded-xl bg-[#171717] border border-white/5 text-[#888] hover:text-white flex-shrink-0"
             />
           </div>

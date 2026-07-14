@@ -19,6 +19,7 @@ import { useApp } from '../../context/AppContext';
 import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import { uploadBananazRoomFile } from '../../services/uploadService';
+import { appShareUrl } from '../../utils/shareLinks';
 
 type LayoutMode = 'grid-3' | 'grid-4' | 'free';
 type MediaKind = 'audio' | 'image' | 'video' | 'file';
@@ -228,6 +229,25 @@ export function BananazRoom() {
     [isAdmin, items]
   );
 
+  useEffect(() => {
+    if (loading || visibleItems.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('bananaz-room-')) return;
+
+    const targetId = hash.replace('bananaz-room-', '');
+    const targetItem = visibleItems.find((item) => item.id === targetId);
+    if (!targetItem) return;
+
+    setSelectedItem(targetItem);
+    window.setTimeout(() => {
+      document.getElementById(`bananaz-room-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [loading, visibleItems]);
+
   const persistLayoutMode = async (nextLayoutMode: LayoutMode) => {
     setLayoutModeState(nextLayoutMode);
     syncFallback(nextLayoutMode, items);
@@ -293,7 +313,7 @@ export function BananazRoom() {
   };
 
   const handleShare = async (item: BananazRoomItem) => {
-    const url = `${window.location.origin}${window.location.pathname}#bananaz-room-${item.id}`;
+    const url = appShareUrl(`bananaz-room-${item.id}`);
 
     try {
       if (navigator.share) {

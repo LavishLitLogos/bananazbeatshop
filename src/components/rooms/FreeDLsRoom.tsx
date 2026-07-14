@@ -9,6 +9,7 @@ import { BeatUploadModal } from '../modals/BeatUploadModal';
 import { BeatDetailModal } from '../modals/BeatDetailModal';
 import { ShareButton } from '../ui/ShareButton';
 import { isBeatInFreeDLs } from '../../utils/beatAccess';
+import { appShareUrl } from '../../utils/shareLinks';
 
 export function FreeDLsRoom() {
   const { goBack, isAdmin, addToast } = useApp();
@@ -49,6 +50,26 @@ export function FreeDLsRoom() {
   useEffect(() => {
     fetchBeats();
   }, [fetchBeats]);
+
+  useEffect(() => {
+    if (loading || beats.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('freebeat-')) return;
+
+    const targetId = hash.replace('freebeat-', '');
+    const targetBeat = beats.find((beat) => beat.id === targetId);
+    if (!targetBeat) return;
+
+    setSelectedBeat(targetBeat);
+    setShowDetail(true);
+    window.setTimeout(() => {
+      document.getElementById(`freebeat-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [beats, loading]);
 
   const handlePlay = (beat: Beat) => {
     if (currentBeat?.id === beat.id) {
@@ -126,7 +147,11 @@ export function FreeDLsRoom() {
           </div>
 
           <div className="flex items-center gap-2">
-            <ShareButton />
+            <ShareButton
+              title="Free DLs"
+              text="Grab free beats from ThisBeatIzBananaz."
+              url={appShareUrl('freedls')}
+            />
 
             {isAdmin && (
               <button
@@ -162,6 +187,7 @@ export function FreeDLsRoom() {
           beats.map((beat) => (
             <div
               key={beat.id}
+              id={`freebeat-${beat.id}`}
               className="beat-card cut-corner-card cursor-pointer rounded-2xl"
               onClick={() => {
                 setSelectedBeat(beat);
@@ -187,6 +213,16 @@ export function FreeDLsRoom() {
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500 text-black tracking-[0.04em]">
                     Free
                   </span>
+                </div>
+
+                <div className="absolute top-2 right-2">
+                  <ShareButton
+                    small
+                    title={beat.title}
+                    text={`Grab "${beat.title}" from Free DLs.`}
+                    url={appShareUrl(`freebeat-${beat.id}`)}
+                    className="bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518]"
+                  />
                 </div>
 
               </div>

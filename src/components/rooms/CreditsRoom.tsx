@@ -12,6 +12,7 @@ import { useAudio } from '../../context/AudioContext';
 import { supabase } from '../../lib/supabase';
 import type { ProdBySong } from '../../types';
 import { BRAND_NAME, PRODUCED_BY_INFO_DEFAULT } from '../../utils/branding';
+import { appShareUrl } from '../../utils/shareLinks';
 import { SongUploadModal } from './ProdByRoom';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -26,7 +27,7 @@ function getCover(song: CreditSong) {
 }
 
 function getCreditUrl(song: CreditSong) {
-  return `${window.location.origin}${window.location.pathname}#credit-${song.id}`;
+  return appShareUrl(`credit-${song.id}`);
 }
 
 export function CreditsRoom() {
@@ -65,6 +66,25 @@ export function CreditsRoom() {
 
   const visibleCredits = useMemo(() => credits.filter((song) => !song.hidden), [credits]);
 
+  useEffect(() => {
+    if (loading || visibleCredits.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('credit-')) return;
+
+    const targetId = hash.replace('credit-', '');
+    const targetCredit = visibleCredits.find((song) => song.id === targetId);
+    if (!targetCredit) return;
+
+    setSelectedCredit(targetCredit);
+    window.setTimeout(() => {
+      document.getElementById(`credit-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [loading, visibleCredits]);
+
   const handlePlay = (song: CreditSong) => {
     if (!song.audio_file_url) {
       addToast('No audio available for this credit.', 'info');
@@ -92,7 +112,7 @@ export function CreditsRoom() {
   };
 
   const handleShare = async (song?: CreditSong) => {
-    const url = song ? getCreditUrl(song) : window.location.href;
+    const url = song ? getCreditUrl(song) : appShareUrl('credits');
     const title = song ? `${song.title} · Produced by ${BRAND_NAME}` : `${BRAND_NAME} Credits`;
 
     try {

@@ -16,6 +16,7 @@ import type { ProdBySong } from '../../types';
 import { BRAND_NAME, EXCLUSIVE_INFO_DEFAULT, EXCLUSIVE_STEMS_NOTE, PRODUCED_BY_DISPLAY_DEFAULT } from '../../utils/branding';
 import { getBeatPriceLabel } from '../../utils/beatAccess';
 import { isExclusiveSong } from '../../utils/exclusiveSongs';
+import { appShareUrl } from '../../utils/shareLinks';
 import { SongUploadModal } from './ProdByRoom';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
@@ -34,7 +35,7 @@ function getCover(song: ExclusiveSong) {
 }
 
 function getSongUrl(song: ExclusiveSong) {
-  return `${window.location.origin}${window.location.pathname}#exclusive-${song.id}`;
+  return appShareUrl(`exclusive-${song.id}`);
 }
 
 export function ExclusivesRoom() {
@@ -88,6 +89,25 @@ export function ExclusivesRoom() {
     [songs]
   );
 
+  useEffect(() => {
+    if (loading || visibleSongs.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('exclusive-')) return;
+
+    const targetId = hash.replace('exclusive-', '');
+    const targetSong = visibleSongs.find((song) => song.id === targetId);
+    if (!targetSong) return;
+
+    setSelectedSong(targetSong);
+    window.setTimeout(() => {
+      document.getElementById(`exclusive-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [loading, visibleSongs]);
+
   const handlePlay = (song: ExclusiveSong) => {
     if (!song.audio_file_url) {
       addToast('No audio available for this exclusive.', 'info');
@@ -115,7 +135,7 @@ export function ExclusivesRoom() {
   };
 
   const handleShare = async (song?: ExclusiveSong) => {
-    const url = song ? getSongUrl(song) : window.location.href;
+    const url = song ? getSongUrl(song) : appShareUrl('exclusives');
 
     try {
       if (navigator.share) {

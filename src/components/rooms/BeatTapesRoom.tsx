@@ -23,6 +23,7 @@ import { requestSignedDownload, triggerBrowserDownload } from '../../services/do
 import type { BeatTape, BeatTapeTrack } from '../../types';
 import { BRAND_NAME } from '../../utils/branding';
 import { renderTaggedAudio } from '../../utils/audioTagger';
+import { appShareUrl } from '../../utils/shareLinks';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -49,7 +50,7 @@ function getTapeCover(tape: TapeWithTracks) {
 }
 
 function getTapeUrl(tape: TapeWithTracks) {
-  return `${window.location.origin}${window.location.pathname}#tape-${tape.id}`;
+  return appShareUrl(`tape-${tape.id}`);
 }
 
 function getTapeType(tape: TapeWithTracks | null) {
@@ -176,6 +177,26 @@ export function BeatTapesRoom() {
   const visibleTapes = useMemo(() => {
     return tapes.filter((tape) => isAdmin || (!tape.hidden && tape.admin_approved));
   }, [isAdmin, tapes]);
+
+  useEffect(() => {
+    if (loading || visibleTapes.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('tape-')) return;
+
+    const targetId = hash.replace('tape-', '');
+    const targetTape = visibleTapes.find((tape) => tape.id === targetId);
+    if (!targetTape) return;
+
+    setExpandedTape(targetTape.id);
+    setActiveTape(targetTape);
+    window.setTimeout(() => {
+      document.getElementById(`tape-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [loading, visibleTapes]);
 
   const handlePlayTape = (tape: TapeWithTracks, startIndex = 0) => {
     const playableTracks = sortTracks(tape.tracks || [])
@@ -362,6 +383,7 @@ export function BeatTapesRoom() {
               small
               title={`${BRAND_NAME} Beat Tapes`}
               text={`Preview beat tapes from ${BRAND_NAME}.`}
+              url={appShareUrl('beattapes')}
             />
 
             {isAdmin && (

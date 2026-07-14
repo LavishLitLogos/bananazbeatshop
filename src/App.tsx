@@ -20,11 +20,28 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { GlobalPlayer } from './components/player/GlobalPlayer';
 import { BeatBoxCart } from './components/modals/BeatBoxCart';
 import { ToastContainer } from './components/ui/Toast';
+import { roomFromShareHash } from './utils/shareLinks';
 
 const INDUSTRIAL_BG = '/assets/backgroundtexture.png';
 
 function App() {
-  const { currentRoom, cartOpen, isAdmin } = useApp();
+  const { currentRoom, cartOpen, isAdmin, setCurrentRoom } = useApp();
+
+  useEffect(() => {
+    const syncRoomFromHash = () => {
+      const sharedRoom = roomFromShareHash();
+      if (sharedRoom && sharedRoom !== currentRoom) {
+        setCurrentRoom(sharedRoom);
+      }
+    };
+
+    syncRoomFromHash();
+    window.addEventListener('hashchange', syncRoomFromHash);
+
+    return () => {
+      window.removeEventListener('hashchange', syncRoomFromHash);
+    };
+  }, [currentRoom, setCurrentRoom]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });

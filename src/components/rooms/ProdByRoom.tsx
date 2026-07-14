@@ -25,6 +25,7 @@ import { getBeatPriceLabel, isBeatFree } from '../../utils/beatAccess';
 import { isExclusiveSong, isSongMarkedExclusiveByText } from '../../utils/exclusiveSongs';
 import { renderTaggedAudio } from '../../utils/audioTagger';
 import { normalizeR2MediaUrl } from '../../utils/mediaUrl';
+import { appShareUrl } from '../../utils/shareLinks';
 import { ShareButton } from '../ui/ShareButton';
 import { uploadAudio, uploadCoverArt } from '../../services/uploadService';
 
@@ -39,7 +40,7 @@ function getSongCover(song: ProducedSong) {
 }
 
 function getSongUrl(song: ProducedSong) {
-  return `${window.location.origin}${window.location.pathname}#song-${song.id}`;
+  return appShareUrl(`song-${song.id}`);
 }
 
 function getSongRights(song: ProducedSong) {
@@ -122,6 +123,21 @@ export function ProdByRoom() {
   const visibleSongs = useMemo(() => {
     return songs.filter((song) => isAdmin || (!song.hidden && song.admin_approved));
   }, [isAdmin, songs]);
+
+  useEffect(() => {
+    if (loading || visibleSongs.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('song-')) return;
+
+    const targetId = hash.replace('song-', '');
+    window.setTimeout(() => {
+      document.getElementById(`song-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [loading, visibleSongs]);
 
   const handlePlaySong = (song: ProducedSong) => {
     if (!song.audio_file_url) {
@@ -302,6 +318,7 @@ export function ProdByRoom() {
               small
               title={`Produced By ${BRAND_NAME}`}
               text={`Listen to complete songs produced by ${BRAND_NAME}.`}
+              url={appShareUrl('prodby')}
             />
 
             {isAdmin && (

@@ -26,6 +26,7 @@ import { BuyModal } from '../modals/BuyModal';
 import { ShareButton } from '../ui/ShareButton';
 import { canBuyBeat, canDownloadBeat, getBeatPriceLabel, isBeatFree, isBeatInBeatLab } from '../../utils/beatAccess';
 import { BRAND_NAME } from '../../utils/branding';
+import { appShareUrl } from '../../utils/shareLinks';
 
 const MAIN_LOGO = '/assets/images/thisbeatizbananazmainlogo copy.png';
 const PLAY_ICON = '/assets/icons/play-icon.png';
@@ -369,6 +370,26 @@ export function BeatLabRoom() {
     });
   }, [activeFilters, beats, searchTerm]);
 
+  useEffect(() => {
+    if (loading || filteredBeats.length === 0) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash.startsWith('beat-')) return;
+
+    const targetId = hash.replace('beat-', '');
+    const targetBeat = filteredBeats.find((beat) => beat.id === targetId);
+    if (!targetBeat) return;
+
+    setSelectedBeat(targetBeat);
+    setShowDetail(true);
+    window.setTimeout(() => {
+      document.getElementById(`beat-${targetId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }, [filteredBeats, loading]);
+
   const toggleFilter = (key: FilterKey, value: string) => {
     setActiveFilters((currentFilters) => {
       if (currentFilters[key] === value) {
@@ -528,6 +549,7 @@ export function BeatLabRoom() {
               small
               title={`${BRAND_NAME} Beats Lab`}
               text={`Browse fresh cookups from ${BRAND_NAME}.`}
+              url={appShareUrl('beatlab')}
             />
 
             <button
@@ -809,6 +831,7 @@ function BeatCard({
 
   return (
     <div
+      id={`beat-${beat.id}`}
       className={`beat-card group relative overflow-hidden cursor-pointer rounded-2xl border transition-all ${
         isCurrentBeat
           ? 'border-[#f5c518]/60 shadow-[0_0_22px_rgba(245,197,24,0.18)]'
@@ -901,6 +924,7 @@ function BeatCard({
             small
             title={beat.title}
             text={`Check out "${beat.title}" by ${BRAND_NAME}`}
+            url={appShareUrl(`beat-${beat.id}`)}
             className="bg-black/70 border border-white/10 text-[#ddd] hover:text-[#f5c518]"
           />
         </div>
