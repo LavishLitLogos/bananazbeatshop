@@ -178,7 +178,7 @@ CREATE POLICY "submissions_delete_admin" ON submissions FOR DELETE TO authentica
 -- Settings table (single row)
 CREATE TABLE app_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  payment_methods jsonb DEFAULT '{"paypal": "daddygangthreads@gmail.com", "cashapp": "$RoyceRipken"}',
+  payment_methods jsonb DEFAULT '{"paypal": "realroyceripken@gmail.com", "cashapp": "$RoyceRipken"}',
   profile jsonb DEFAULT '{}',
   social_links jsonb DEFAULT '{}',
   leasing_terms text DEFAULT 'USABLE FOR ALL PURPOSES. Credit: prod. by ThisBeatIzBananaz 🔥',

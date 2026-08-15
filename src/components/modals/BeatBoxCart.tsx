@@ -15,7 +15,7 @@ interface CheckoutForm {
 }
 
 const CASH_APP_HANDLE = '$RoyceRipken';
-const PAYPAL_EMAIL = 'daddygangthreads@gmail.com';
+const PAYPAL_EMAIL = 'realroyceripken@gmail.com';
 
 const paymentCopy: Record<PaymentMethod, { label: string; destination: string; helper: string }> = {
   stripe: {

@@ -26,7 +26,7 @@ interface PaymentOption {
   destination?: string;
 }
 
-const DEFAULT_PAYPAL_DESTINATION = 'daddygangthreads@gmail.com';
+const DEFAULT_PAYPAL_DESTINATION = 'realroyceripken@gmail.com';
 const DEFAULT_CASHAPP_DESTINATION = '$RoyceRipken';
 
 function formatMoney(amount: number) {
